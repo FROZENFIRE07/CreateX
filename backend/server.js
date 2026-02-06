@@ -24,6 +24,11 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' })); // Allow larger payloads for content
 
+app.use(cors({
+  origin: ['http://localhost:3000', 'create-x-6mvj.vercel.app'],
+  credentials: true
+}));
+
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('✅ MongoDB connected successfully'))
