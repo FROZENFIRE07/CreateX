@@ -9,9 +9,8 @@
   },
   "dependencies": {
     "@langchain/community": "^0.0.25",
-    "@langchain/core": "^1.1.19",
+    "@langchain/core": "^0.3.80",
     "@langchain/groq": "^1.0.4",
-    "@langchain/langgraph": "^0.2.0",
     "@langchain/openai": "^0.0.25",
     "@pinecone-database/pinecone": "^2.0.0",
     "bcryptjs": "^2.4.3",
