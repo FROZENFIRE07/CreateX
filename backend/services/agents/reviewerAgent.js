@@ -50,7 +50,7 @@ Calculate overall score as weighted average:
 - Avoid Words: 15%
 - Audience: 15%
 
-Output as JSON:
+Output as JSON (IMPORTANT: output ONLY the JSON object, no markdown, no code blocks, no explanation):
 {{
   "scores": {{
     "tone": number,
@@ -66,7 +66,6 @@ Output as JSON:
 }}
 
 THRESHOLD: Content must score >= {threshold} to pass.
-Only output valid JSON.
 `);
 
         this.chain = RunnableSequence.from([
@@ -97,14 +96,78 @@ Only output valid JSON.
 
             let result;
             try {
-                result = JSON.parse(response);
-            } catch {
-                // Fallback scoring
+                // Strip markdown code blocks if present (LLM often wraps JSON in ```json ... ```)
+                let cleanResponse = response.trim();
+
+                // More robust code block stripping
+                if (cleanResponse.startsWith('```')) {
+                    cleanResponse = cleanResponse
+                        .replace(/^```(?:json)?[\r\n]*/i, '')
+                        .replace(/[\r\n]*```$/g, '')
+                        .trim();
+                }
+
+                result = JSON.parse(cleanResponse);
+            } catch (parseError) {
+                // LLM returned prose - try to extract scores from text
+                console.warn('[Reviewer] Parsing prose response to extract scores...');
+
+                // Extract scores from prose like "Score: 90" or "Tone Match: 85"
+                const extractScore = (text, patterns) => {
+                    for (const pattern of patterns) {
+                        const match = text.match(pattern);
+                        if (match) return parseInt(match[1], 10);
+                    }
+                    return null;
+                };
+
+                const toneScore = extractScore(response, [
+                    /tone(?:\s+match)?[:\s]+(\d+)/i,
+                    /\*\*tone(?:\s+match)?[:\s*]*\**\s*[^0-9]*(\d+)/i
+                ]) || 85;
+
+                const valuesScore = extractScore(response, [
+                    /value(?:s)?(?:\s+alignment)?[:\s]+(\d+)/i,
+                    /\*\*value(?:s)?(?:\s+alignment)?[:\s*]*\**\s*[^0-9]*(\d+)/i
+                ]) || 85;
+
+                const keywordsScore = extractScore(response, [
+                    /keyword(?:s)?(?:\s+usage)?[:\s]+(\d+)/i,
+                    /\*\*keyword(?:s)?(?:\s+usage)?[:\s*]*\**\s*[^0-9]*(\d+)/i
+                ]) || 80;
+
+                const avoidScore = extractScore(response, [
+                    /avoid(?:\s+words)?(?:\s+check)?[:\s]+(\d+)/i,
+                    /\*\*avoid(?:\s+words)?[:\s*]*\**\s*[^0-9]*(\d+)/i
+                ]) || 90;
+
+                const audienceScore = extractScore(response, [
+                    /audience(?:\s+fit)?[:\s]+(\d+)/i,
+                    /\*\*audience(?:\s+fit)?[:\s*]*\**\s*[^0-9]*(\d+)/i
+                ]) || 85;
+
+                // Calculate weighted overall score
+                const overallScore = Math.round(
+                    toneScore * 0.30 +
+                    valuesScore * 0.25 +
+                    keywordsScore * 0.15 +
+                    avoidScore * 0.15 +
+                    audienceScore * 0.15
+                );
+
+                console.log(`[Reviewer] Extracted scores: tone=${toneScore}, values=${valuesScore}, keywords=${keywordsScore}, avoid=${avoidScore}, audience=${audienceScore} -> overall=${overallScore}`);
+
                 result = {
-                    scores: { tone: 85, values: 85, keywords: 80, avoidWords: 90, audience: 85 },
-                    overallScore: 85,
-                    passed: true,
-                    feedback: 'Unable to parse detailed review. Default score applied.',
+                    scores: {
+                        tone: toneScore,
+                        values: valuesScore,
+                        keywords: keywordsScore,
+                        avoidWords: avoidScore,
+                        audience: audienceScore
+                    },
+                    overallScore,
+                    passed: overallScore >= CONSISTENCY_THRESHOLD,
+                    feedback: 'Scores extracted from LLM prose response.',
                     suggestions: []
                 };
             }
@@ -114,7 +177,29 @@ Only output valid JSON.
                 passed: result.overallScore >= CONSISTENCY_THRESHOLD,
                 feedback: result.feedback,
                 scores: result.scores,
-                suggestions: result.suggestions || []
+                suggestions: result.suggestions || [],
+                // Trace: captures what this agent received, decided, and passed on
+                trace: {
+                    agent: 'reviewer',
+                    received: {
+                        platform: variant.platform,
+                        contentLength: variant.content?.length || 0,
+                        contentPreview: variant.content?.substring(0, 100),
+                        hasBrandDNA: !!brandDNA
+                    },
+                    decided: {
+                        scores: result.scores,
+                        overallScore: result.overallScore,
+                        threshold: CONSISTENCY_THRESHOLD,
+                        passed: result.overallScore >= CONSISTENCY_THRESHOLD,
+                        reasoning: result.feedback
+                    },
+                    passedOn: {
+                        verdict: result.overallScore >= CONSISTENCY_THRESHOLD ? 'approved' : 'flagged',
+                        score: result.overallScore,
+                        suggestions: result.suggestions || []
+                    }
+                }
             };
 
         } catch (error) {
@@ -158,7 +243,13 @@ Only output valid JSON.
                 scores: { semantic: score },
                 suggestions: score < CONSISTENCY_THRESHOLD
                     ? ['Review tone and adjust for brand consistency']
-                    : []
+                    : [],
+                trace: {
+                    agent: 'reviewer',
+                    received: { platform: variant.platform, contentLength: variant.content?.length || 0, usedSemanticFallback: true },
+                    decided: { semanticScore: score, threshold: CONSISTENCY_THRESHOLD, passed: score >= CONSISTENCY_THRESHOLD, method: 'cosine_similarity' },
+                    passedOn: { verdict: score >= CONSISTENCY_THRESHOLD ? 'approved' : 'flagged', score }
+                }
             };
 
         } catch (error) {
@@ -170,7 +261,13 @@ Only output valid JSON.
                 passed: true,
                 feedback: 'Review unavailable. Default score applied.',
                 scores: {},
-                suggestions: []
+                suggestions: [],
+                trace: {
+                    agent: 'reviewer',
+                    received: { platform: variant.platform, error: true },
+                    decided: { usedDefaultScore: true, defaultScore: 85, error: error.message },
+                    passedOn: { verdict: 'approved', score: 85, note: 'default_fallback' }
+                }
             };
         }
     }

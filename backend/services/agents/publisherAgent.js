@@ -36,7 +36,36 @@ class PublisherAgent {
             ...variant,
             formatted,
             publishResult,
-            publishedAt: new Date()
+            publishedAt: new Date(),
+            // Trace: captures what this agent received, decided, and passed on
+            trace: {
+                agent: 'publisher',
+                received: {
+                    platform: variant.platform,
+                    reviewStatus: variant.status,
+                    consistencyScore: variant.consistencyScore,
+                    contentLength: variant.content?.length || 0
+                },
+                decided: {
+                    formatterUsed: variant.platform,
+                    formatType: formatted.type,
+                    finalCharCount: formatted.charCount,
+                    publishAction: variant.status === 'approved' ? 'publish' : 'skip',
+                    publishReason: variant.status === 'approved'
+                        ? `Score ${variant.consistencyScore}% >= 80% threshold`
+                        : `Score ${variant.consistencyScore}% below 80% threshold`
+                },
+                passedOn: {
+                    published: publishResult.success,
+                    mockId: publishResult.mockId,
+                    timestamp: publishResult.timestamp,
+                    finalOutput: {
+                        type: formatted.type,
+                        charCount: formatted.charCount,
+                        apiFormatKeys: Object.keys(formatted.apiFormat || {})
+                    }
+                }
+            }
         };
     }
 

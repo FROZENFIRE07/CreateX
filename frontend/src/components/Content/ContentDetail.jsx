@@ -88,7 +88,7 @@ function ContentDetail() {
     return (
         <div className="animate-fade-in">
             {/* Header */}
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4 content-detail-header">
                 <div>
                     <Link to="/" className="text-muted" style={{ fontSize: '0.875rem' }}>← Back to Dashboard</Link>
                     <h1 className="mt-2">{content.title}</h1>
@@ -121,7 +121,7 @@ function ContentDetail() {
                 </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '1.5rem' }}>
+            <div className="page-grid-wide">
                 {/* Main Content Area */}
                 <div>
                     {/* Original Content */}
@@ -201,7 +201,7 @@ function ContentDetail() {
 
                 {/* Sidebar - Workflow Log */}
                 <div>
-                    <div className="card" style={{ position: 'sticky', top: '80px' }}>
+                    <div className="card workflow-sidebar" style={{ position: 'sticky', top: '80px' }}>
                         <div className="card-header">
                             <h3 className="card-title">Workflow Log</h3>
                         </div>

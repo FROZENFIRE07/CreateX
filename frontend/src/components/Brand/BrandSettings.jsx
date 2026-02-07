@@ -105,7 +105,7 @@ function BrandSettings() {
                 <p className="mt-1">Define your brand voice for consistent content generation</p>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '1.5rem' }}>
+            <div className="page-grid-wide">
                 {/* Form */}
                 <div className="card">
                     <form onSubmit={handleSubmit}>

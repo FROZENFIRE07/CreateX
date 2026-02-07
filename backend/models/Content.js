@@ -86,6 +86,13 @@ const contentSchema = new mongoose.Schema({
         timestamp: { type: Date, default: Date.now },
         details: mongoose.Schema.Types.Mixed
     }],
+    // Pipeline trace: end-to-end observability of what each agent received, decided, and passed on
+    pipelineTrace: [{
+        agent: String,
+        received: mongoose.Schema.Types.Mixed,
+        decided: mongoose.Schema.Types.Mixed,
+        passedOn: mongoose.Schema.Types.Mixed
+    }],
     // KPIs for this content
     kpis: {
         hitRate: Number, // % variants passing review

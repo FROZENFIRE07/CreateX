@@ -68,7 +68,18 @@ Only output valid JSON.
             keywords: [],
             sentiment: 'neutral',
             context: [],
-            enrichedContent: ''
+            enrichedContent: '',
+            // Trace: captures what this agent received, decided, and passed on
+            trace: {
+                agent: 'ingest',
+                received: {
+                    contentTitle: content.title,
+                    contentLength: content.data?.length || 0,
+                    hasBrandDNA: !!brandDNA
+                },
+                decided: {},
+                passedOn: {}
+            }
         };
 
         try {
@@ -80,9 +91,15 @@ Only output valid JSON.
 
             let analysis;
             try {
-                analysis = JSON.parse(analysisResponse);
+                // Strip markdown code blocks if present (LLM often wraps JSON in ```json ... ```)
+                let cleanResponse = analysisResponse.trim();
+                if (cleanResponse.startsWith('```')) {
+                    cleanResponse = cleanResponse.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+                }
+                analysis = JSON.parse(cleanResponse);
             } catch {
                 // Fallback analysis
+                console.warn('[Ingest] Failed to parse LLM response as JSON');
                 analysis = {
                     themes: ['general'],
                     keywords: content.title.split(' ').slice(0, 5),
@@ -149,6 +166,23 @@ ${result.context.map(c => c.text).join('\n---\n') || 'No prior context available
 BRAND GUIDELINES:
 ${brandDNA ? brandDNA.rawText || 'Use brand voice' : 'No brand DNA defined - use professional tone.'}
 `;
+
+            // Populate trace with decisions and output
+            result.trace.decided = {
+                extractedThemes: result.themes,
+                extractedKeywords: result.keywords,
+                sentiment: result.sentiment,
+                audience: result.audience,
+                keyMessages: result.keyMessages,
+                vectorStored: !!result.vectorId,
+                contextDocsRetrieved: result.context.length,
+                brandContextFound: !!result.brandContext
+            };
+            result.trace.passedOn = {
+                enrichedContentLength: result.enrichedContent.length,
+                themesForGenerator: result.themes,
+                contextSnippets: result.context.map(c => ({ type: c.type, score: c.score, preview: c.text?.substring(0, 100) }))
+            };
 
             return result;
 

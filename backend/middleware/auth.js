@@ -20,15 +20,18 @@ const authMiddleware = async (req, res, next) => {
         // Verify token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+        // Handle both 'id' and 'userId' for backward compatibility
+        const userIdFromToken = decoded.userId || decoded.id;
+
         // Find user and attach to request
-        const user = await User.findById(decoded.userId).select('-password');
+        const user = await User.findById(userIdFromToken).select('-password');
 
         if (!user) {
             return res.status(401).json({ error: 'User not found' });
         }
 
         req.user = user;
-        req.userId = decoded.userId;
+        req.userId = userIdFromToken;
         next();
     } catch (error) {
         console.error('Auth middleware error:', error.message);

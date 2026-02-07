@@ -37,6 +37,22 @@ function ProtectedRoute({ children }) {
 // Layout with navbar for authenticated pages
 function Layout({ children }) {
     const { user, logout } = useAuth();
+    const [menuOpen, setMenuOpen] = React.useState(false);
+
+    // Close menu on route change
+    React.useEffect(() => {
+        setMenuOpen(false);
+    }, [children]);
+
+    // Prevent body scroll when menu is open
+    React.useEffect(() => {
+        if (menuOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => { document.body.style.overflow = ''; };
+    }, [menuOpen]);
 
     return (
         <>
@@ -47,16 +63,33 @@ function Layout({ children }) {
                         <span>SACO</span>
                     </a>
 
-                    <div className="navbar-nav">
-                        <a href="/" className="btn btn-ghost">Dashboard</a>
-                        <a href="/upload" className="btn btn-ghost">Upload</a>
-                        <a href="/brand" className="btn btn-ghost">Brand DNA</a>
-                        <button onClick={logout} className="btn btn-secondary btn-sm">
+                    <button
+                        className={`navbar-toggle ${menuOpen ? 'active' : ''}`}
+                        onClick={() => setMenuOpen(!menuOpen)}
+                        aria-label="Toggle menu"
+                    >
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </button>
+
+                    <div className={`navbar-nav ${menuOpen ? 'open' : ''}`}>
+                        <a href="/" className="btn btn-ghost" onClick={() => setMenuOpen(false)}>Dashboard</a>
+                        <a href="/upload" className="btn btn-ghost" onClick={() => setMenuOpen(false)}>Upload</a>
+                        <a href="/brand" className="btn btn-ghost" onClick={() => setMenuOpen(false)}>Brand DNA</a>
+                        <button onClick={() => { setMenuOpen(false); logout(); }} className="btn btn-secondary btn-sm">
                             Logout
                         </button>
                     </div>
                 </div>
             </nav>
+
+            {/* Mobile menu overlay */}
+            <div
+                className={`mobile-overlay ${menuOpen ? 'active' : ''}`}
+                onClick={() => setMenuOpen(false)}
+            />
+
             <main className="page">
                 <div className="container">
                     {children}

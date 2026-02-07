@@ -52,7 +52,7 @@ function Dashboard() {
     return (
         <div className="animate-fade-in">
             {/* Header */}
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4 dashboard-header">
                 <div>
                     <h1>Dashboard</h1>
                     <p className="mt-1">Your content orchestration at a glance</p>
@@ -112,46 +112,68 @@ function Dashboard() {
                         </Link>
                     </div>
                 ) : (
-                    <div className="table-container">
-                        <table className="table">
-                            <thead>
-                                <tr>
-                                    <th>Title</th>
-                                    <th>Type</th>
-                                    <th>Status</th>
-                                    <th>Variants</th>
-                                    <th>Created</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {contents.map(content => (
-                                    <tr key={content._id}>
-                                        <td style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>
-                                            {content.title}
-                                        </td>
-                                        <td>
-                                            <span className="badge badge-info">{content.type}</span>
-                                        </td>
-                                        <td>
-                                            <StatusBadge status={content.orchestrationStatus} />
-                                        </td>
-                                        <td>
-                                            {content.variants?.length || 0} variants
-                                        </td>
-                                        <td>
-                                            {new Date(content.createdAt).toLocaleDateString()}
-                                        </td>
-                                        <td>
-                                            <Link to={`/content/${content._id}`} className="btn btn-ghost btn-sm">
-                                                View
-                                            </Link>
-                                        </td>
+                    <>
+                        <div className="table-container desktop-only">
+                            <table className="table">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Type</th>
+                                        <th>Status</th>
+                                        <th>Variants</th>
+                                        <th>Created</th>
+                                        <th></th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody>
+                                    {contents.map(content => (
+                                        <tr key={content._id}>
+                                            <td style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>
+                                                {content.title}
+                                            </td>
+                                            <td>
+                                                <span className="badge badge-info">{content.type}</span>
+                                            </td>
+                                            <td>
+                                                <StatusBadge status={content.orchestrationStatus} />
+                                            </td>
+                                            <td>
+                                                {content.variants?.length || 0} variants
+                                            </td>
+                                            <td>
+                                                {new Date(content.createdAt).toLocaleDateString()}
+                                            </td>
+                                            <td>
+                                                <Link to={`/content/${content._id}`} className="btn btn-ghost btn-sm">
+                                                    View
+                                                </Link>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Mobile card list */}
+                        <div className="mobile-content-list">
+                            {contents.map(content => (
+                                <Link to={`/content/${content._id}`} key={content._id} className="mobile-content-item" style={{ textDecoration: 'none' }}>
+                                    <div className="mobile-content-item-title">{content.title}</div>
+                                    <div className="mobile-content-item-meta">
+                                        <span className="badge badge-info">{content.type}</span>
+                                        <StatusBadge status={content.orchestrationStatus} />
+                                        <span className="text-muted">{content.variants?.length || 0} variants</span>
+                                    </div>
+                                    <div className="mobile-content-item-footer">
+                                        <span className="text-muted" style={{ fontSize: '0.75rem' }}>
+                                            {new Date(content.createdAt).toLocaleDateString()}
+                                        </span>
+                                        <span className="btn btn-ghost btn-sm">View →</span>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    </>
                 )}
             </div>
 

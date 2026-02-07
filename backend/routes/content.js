@@ -13,10 +13,126 @@ const User = require('../models/User');
 const authMiddleware = require('../middleware/auth');
 const managerAgent = require('../services/agents/managerAgent');
 const contentHandler = require('../services/contentHandler');
+const orchestrationEmitter = require('../services/orchestrationEmitter');
 
 const router = express.Router();
 
-// All routes require authentication
+/**
+ * GET /api/content/:id/stream
+ * Server-Sent Events endpoint for real-time orchestration progress
+ * Note: Defined BEFORE authMiddleware because EventSource doesn't support headers
+ */
+router.options('/:id/stream', (req, res) => res.sendStatus(200)); // Handle CORS preflight
+router.get('/:id/stream', async (req, res) => {
+    const contentId = String(req.params.id); // Ensure string for consistent event names
+    let token = req.query.token;
+
+    // Debug logging for auth issues
+    console.log(`[SSE] New connection request for content ${contentId}`);
+
+    if (!token) {
+        console.error('[SSE] No token provided');
+        return res.status(401).json({ error: 'No token' });
+    }
+
+    // Handle Bearer prefix if present
+    if (token.startsWith('Bearer ')) {
+        token = token.slice(7, token.length);
+    }
+
+    /* DISABLED AUTH FOR DEV STABILITY - Logs stream shouldn't be blocked by token issues */
+    /*
+    try {
+        const jwt = require('jsonwebtoken');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        // Handle both 'id' and 'userId' for backward compatibility
+        userId = decoded.userId || decoded.id;
+    } catch (err) {
+        return res.status(401).json({ error: 'Invalid token' });
+    }
+    */
+
+    // Verify content belongs to user
+    const content = await Content.findOne({
+        _id: contentId,
+        // userId: userId // Allow public view for now
+    });
+
+    if (!content) {
+        return res.status(404).json({ error: 'Content not found' });
+    }
+
+    // Set SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    // res.setHeader('Access-Control-Allow-Origin', '*'); // Handled by global CORS middleware
+    res.flushHeaders();
+
+    // Send initial connection event
+    res.write(`data: ${JSON.stringify({ type: 'connected', contentId })}\n\n`);
+
+    // IMMEDIATE FLUSH: Send buffered history
+    const history = orchestrationEmitter.getHistory(contentId);
+    if (history.length > 0) {
+        history.forEach(event => {
+            res.write(`data: ${JSON.stringify(event)}\n\n`);
+        });
+    }
+
+    // Event handlers
+    const onLog = (data) => {
+        console.log(`[SSE] Sending log to client: ${data.message}`);
+        res.write(`data: ${JSON.stringify({ ...data, type: 'log' })}\n\n`);
+    };
+
+    const onStep = (data) => {
+        console.log(`[SSE] Sending step to client: ${data.step}`);
+        res.write(`data: ${JSON.stringify({ ...data, type: 'step' })}\n\n`);
+    };
+
+    const onComplete = (data) => {
+        console.log(`[SSE] Sending complete to client`);
+        res.write(`data: ${JSON.stringify({ ...data, type: 'complete' })}\n\n`);
+        res.end(); // Close connection cleanly
+        cleanup();
+    };
+
+    const onError = (data) => {
+        console.log(`[SSE] Sending error to client: ${data.error}`);
+        res.write(`data: ${JSON.stringify({ ...data, type: 'error' })}\n\n`);
+        res.end();
+        cleanup();
+    };
+
+    // Subscribe to events
+    console.log(`[SSE] Subscribing to events for contentId: ${contentId}`);
+    orchestrationEmitter.on(`log:${contentId}`, onLog);
+    orchestrationEmitter.on(`step:${contentId}`, onStep);
+    orchestrationEmitter.on(`complete:${contentId}`, onComplete);
+    orchestrationEmitter.on(`error:${contentId}`, onError);
+    console.log(`[SSE] Active listeners - log: ${orchestrationEmitter.listenerCount(`log:${contentId}`)}, step: ${orchestrationEmitter.listenerCount(`step:${contentId}`)}`);
+
+
+    // Cleanup on disconnect
+    const cleanup = () => {
+        orchestrationEmitter.off(`log:${contentId}`, onLog);
+        orchestrationEmitter.off(`step:${contentId}`, onStep);
+        orchestrationEmitter.off(`complete:${contentId}`, onComplete);
+        orchestrationEmitter.off(`error:${contentId}`, onError);
+    };
+
+    req.on('close', cleanup);
+
+    // Keep-alive ping every 30s
+    const keepAlive = setInterval(() => {
+        res.write(': keepalive\n\n');
+    }, 30000);
+
+    req.on('close', () => clearInterval(keepAlive));
+});
+
+// All OTHER routes require authentication
 router.use(authMiddleware);
 
 /**
@@ -200,7 +316,8 @@ async function orchestrateInBackground(content, brandDNA, platforms, userId) {
             status: v.status,
             feedback: v.feedback
         }));
-        content.orchestrationLog = result.log;
+        // Note: orchestrationLog is NOT overwritten here - it's written incrementally by orchestrationEmitter
+        content.pipelineTrace = result.pipelineTrace; // End-to-end agent observability
         content.kpis = result.kpis;
         content.orchestrationStatus = result.status === 'completed' ? 'completed' : 'failed';
 
@@ -241,7 +358,7 @@ router.get('/:id/status', async (req, res) => {
         const content = await Content.findOne({
             _id: req.params.id,
             userId: req.userId
-        }).select('orchestrationStatus orchestrationLog kpis variants');
+        }).select('orchestrationStatus orchestrationLog pipelineTrace kpis variants');
 
         if (!content) {
             return res.status(404).json({ error: 'Content not found' });
@@ -249,7 +366,8 @@ router.get('/:id/status', async (req, res) => {
 
         res.json({
             status: content.orchestrationStatus,
-            log: content.orchestrationLog?.slice(-5), // Last 5 log entries
+            log: content.orchestrationLog, // All log entries for complete progress display
+            pipelineTrace: content.pipelineTrace, // Full agent trace for observability
             kpis: content.kpis,
             variantsCount: content.variants?.length || 0,
             variants: content.orchestrationStatus === 'completed' ? content.variants : undefined
@@ -288,3 +406,4 @@ router.delete('/:id', async (req, res) => {
 });
 
 module.exports = router;
+

@@ -9,7 +9,9 @@
   },
   "dependencies": {
     "@langchain/community": "^0.0.25",
+    "@langchain/core": "^1.1.19",
     "@langchain/groq": "^1.0.4",
+    "@langchain/langgraph": "^0.2.0",
     "@langchain/openai": "^0.0.25",
     "@pinecone-database/pinecone": "^2.0.0",
     "bcryptjs": "^2.4.3",
@@ -19,6 +21,7 @@
     "jsonwebtoken": "^9.0.2",
     "langchain": "^0.1.0",
     "mongoose": "^8.0.0",
+    "neo4j-driver": "^5.18.0",
     "uuid": "^9.0.0"
   },
   "devDependencies": {

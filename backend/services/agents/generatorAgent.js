@@ -17,28 +17,82 @@ const { StringOutputParser } = require('@langchain/core/output_parsers');
 const PLATFORM_SPECS = {
     twitter: {
         maxChars: 280,
-        style: 'concise, punchy, use hashtags, can be a thread (1/n format)',
-        format: 'short text with optional hashtags'
+        style: 'concise, punchy, use 2-3 hashtags max',
+        format: 'short text with hashtags at the end',
+        template: `Create a Twitter/X post (max 280 chars):
+- Hook in the first sentence
+- Core message in 2-3 sentences
+- End with 2-3 relevant hashtags
+- Make it shareable and thought-provoking
+Example: "As teams scale, talent isn't the issue, it's the process. Investing early preserves clarity and supports growth. #AIpowered #ScalingTeams"`
     },
     linkedin: {
         maxChars: 3000,
-        style: 'professional, thought-leadership, can use emojis sparingly, hook in first line',
-        format: 'longer form with sections, bullet points allowed'
+        style: 'professional thought-leadership with strategic use of emojis',
+        format: 'hook + body with bullet points + call-to-action',
+        template: `Create a LinkedIn post (max 3000 chars):
+- Start with a powerful hook (1-2 sentences)
+- Use 1-2 emojis strategically (not excessive)
+- Break into digestible sections
+- Include "Key takeaways:" section with bullet points (*)
+- End with brand voice statement or insight
+- Professional but engaging tone
+Example structure:
+"As teams scale, talent alone is not enough 🚀
+High-performing organizations invest in process optimization early.
+
+Key takeaways:
+* Scaling exposes process weaknesses, not talent gaps
+* Early investment in optimization preserves clarity
+* AI-powered systems enable dynamic adaptation
+
+We make complex AI topics accessible, inspiring action through facts, not hype."`
     },
     email: {
         maxChars: 5000,
-        style: 'newsletter format, clear subject line implication, scannable, personal tone',
-        format: 'subject line suggestion + body with sections'
+        style: 'newsletter format with clear structure and scannable sections',
+        format: 'subject line + greeting + sections with headers + closing',
+        template: `Create an email newsletter (max 5000 chars):
+- Start with implied subject line context
+- Use clear section breaks with spacing
+- Make it scannable with short paragraphs
+- Include concrete insights or examples
+- Professional yet conversational tone
+- End with a subtle call-to-action or insight
+Example structure:
+"As teams scale, shortcuts stop working.
+
+Communication breaks down, decisions slow, and ownership becomes unclear.
+
+High-performing organizations invest in process early to preserve clarity as complexity grows.
+
+AI-powered systems are changing how teams design, build, and operate digital products.
+
+By embedding intelligent capabilities directly into workflows, organizations can automate routine decisions and adapt systems dynamically."`
     },
     instagram: {
         maxChars: 2200,
-        style: 'visual-first caption, emotional, storytelling, use emojis and hashtags',
-        format: 'caption with hashtag block at end'
+        style: 'visual-first caption with storytelling and emojis',
+        format: 'engaging story + line break + hashtag block',
+        template: `Create an Instagram caption (max 2200 chars):
+- Tell a story or share an insight
+- Use emojis naturally throughout
+- Break into short, readable paragraphs
+- Add spacing for visual appeal
+- End with 8-15 relevant hashtags grouped together
+- Engaging and approachable tone`
     },
     blog: {
         maxChars: 10000,
-        style: 'SEO-optimized, comprehensive, uses headers and subheaders',
-        format: 'full article with H2/H3 structure'
+        style: 'SEO-optimized long-form with clear structure',
+        format: 'intro + H2 sections + conclusion',
+        template: `Create a blog post (max 10000 chars):
+- Start with compelling introduction
+- Use clear headers (H2: ##, H3: ###)
+- Include bullet points for lists
+- Provide depth and examples
+- SEO-conscious language
+- Professional and authoritative tone`
     }
 };
 
@@ -47,17 +101,18 @@ class GeneratorAgent {
         this.llm = new ChatGroq({
             apiKey: process.env.GROQ_API_KEY,
             model: 'llama-3.3-70b-versatile',
-            temperature: 0.7
+            temperature: 0.5  // Lower temp for better JSON compliance
         });
 
         this.generationPrompt = PromptTemplate.fromTemplate(`
 You are the Generator Agent - a creative content transformer for SACO.
-Transform the enriched content into a {platform}-optimized version.
+Transform the enriched content into a {platform}-optimized version following EXACT platform conventions.
 
 PLATFORM: {platform}
 MAX CHARACTERS: {maxChars}
-STYLE GUIDE: {style}
-FORMAT: {format}
+
+PLATFORM-SPECIFIC REQUIREMENTS:
+{platformTemplate}
 
 ENRICHED CONTENT:
 {enrichedContent}
@@ -65,27 +120,29 @@ ENRICHED CONTENT:
 BRAND DNA:
 {brandDNA}
 
-INSTRUCTIONS:
-1. Keep the core message intact
-2. Adapt tone and length for the platform
-3. Follow brand guidelines strictly
-4. Do NOT hallucinate facts - only use information from the input
-5. Make it engaging and shareable
+CRITICAL INSTRUCTIONS:
+1. Follow the platform template structure EXACTLY as shown in the example
+2. For LinkedIn: Include "Key takeaways:" section with bullet points (*)
+3. For Email: Use clear paragraph breaks with spacing between sections
+4. For Twitter: Keep under 280 chars with hashtags at the end
+5. Adapt the CORE MESSAGE while preserving facts - NO hallucination
+6. Match the example formatting style precisely
+7. Incorporate brand voice naturally
 
 OUTPUT REQUIREMENTS:
-- Stay under {maxChars} characters for the main content
-- Include platform-appropriate elements (hashtags, hooks, etc.)
-- If Twitter, create a thread if needed (use 1/n format)
+- Stay under {maxChars} characters
+- Follow platform conventions shown in template
+- Use proper line breaks (\\n) for structure
+- For multi-paragraph content, separate with \\n\\n
 
-Output as JSON:
-{{
-  "content": "the generated content",
-  "hashtags": ["tag1", "tag2"] or [],
-  "hook": "first line or subject",
-  "charCount": number
-}}
+CRITICAL JSON RULES:
+- Output ONLY valid JSON, no markdown, no code blocks
+- All newlines in content MUST be escaped as \\n
+- All quotes in content MUST be escaped as \\"
+- Content must be a SINGLE LINE string with escape sequences
 
-Only output valid JSON.
+Output format:
+{{"content": "line1\\nline2\\nline3", "hashtags": ["tag1"], "hook": "first line", "charCount": 123}}
 `);
 
         this.chain = RunnableSequence.from([
@@ -101,30 +158,71 @@ Only output valid JSON.
      * @param {string} platform - Target platform
      * @param {object} ingestResult - Analysis from Ingest Agent
      * @param {object} brandDNA - Brand guidelines
+     * @param {string} reflectionHint - Optional hint from reflector for retry attempts
      */
-    async generate(content, platform, ingestResult, brandDNA = null) {
+    async generate(content, platform, ingestResult, brandDNA = null, reflectionHint = null) {
         const specs = PLATFORM_SPECS[platform] || PLATFORM_SPECS.blog;
 
         try {
+            // Build brand text with reflection hint if retrying
+            let brandText = brandDNA?.rawText || 'No brand DNA - use professional, engaging tone.';
+            if (reflectionHint) {
+                brandText += `\n\nIMPORTANT: Previous attempt failed. ${reflectionHint}`;
+            }
+
             const response = await this.chain.invoke({
                 platform,
                 maxChars: specs.maxChars,
-                style: specs.style,
-                format: specs.format,
+                platformTemplate: specs.template,
                 enrichedContent: ingestResult.enrichedContent || content.data,
-                brandDNA: brandDNA?.rawText || 'No brand DNA - use professional, engaging tone.'
+                brandDNA: brandText
             });
 
             let result;
             try {
-                result = JSON.parse(response);
+                // Strip markdown code blocks if present (LLM often wraps JSON in ```json ... ```)
+                let cleanResponse = response.trim();
+
+                // More robust code block stripping
+                if (cleanResponse.startsWith('```')) {
+                    // Remove opening ```json or ``` and closing ```
+                    cleanResponse = cleanResponse
+                        .replace(/^```(?:json)?[\r\n]*/i, '')
+                        .replace(/[\r\n]*```$/g, '')
+                        .trim();
+                }
+
+                result = JSON.parse(cleanResponse);
             } catch {
-                // If JSON parsing fails, use raw response
+                // If JSON parsing fails, try to extract content from a partial JSON response
+                console.warn('[Generator] Failed to parse LLM response as JSON for', platform);
+                console.warn('[Generator] Raw response:', response.substring(0, 300));
+
+                // Try to extract content field from partial/malformed JSON
+                let extractedContent = '';
+                const contentMatch = response.match(/"content"\s*:\s*"([^"]+)/);
+                if (contentMatch) {
+                    extractedContent = contentMatch[1];
+                } else {
+                    // Strip any code blocks and use as raw content
+                    extractedContent = response
+                        .replace(/^```(?:json)?[\r\n]*/gi, '')
+                        .replace(/[\r\n]*```$/g, '')
+                        .replace(/^\s*\{[\s\S]*?"content"\s*:\s*"/i, '')
+                        .replace(/"[\s\S]*$/i, '')
+                        .trim();
+
+                    // If still nothing useful, use original content data
+                    if (!extractedContent || extractedContent.length < 20) {
+                        extractedContent = content.data.substring(0, specs.maxChars - 50);
+                    }
+                }
+
                 result = {
-                    content: response.substring(0, specs.maxChars),
+                    content: extractedContent.substring(0, specs.maxChars),
                     hashtags: [],
-                    hook: response.substring(0, 50),
-                    charCount: response.length
+                    hook: extractedContent.substring(0, 50),
+                    charCount: extractedContent.length
                 };
             }
 
@@ -144,6 +242,30 @@ Only output valid JSON.
                     charCount: result.charCount || result.content.length,
                     truncated: result.truncated || false,
                     themes: ingestResult.themes
+                },
+                // Trace: captures what this agent received, decided, and passed on
+                trace: {
+                    agent: 'generator',
+                    received: {
+                        platform,
+                        platformSpecs: specs,
+                        enrichedContentLength: (ingestResult.enrichedContent || content.data).length,
+                        themesFromIngest: ingestResult.themes,
+                        hasBrandDNA: !!brandDNA
+                    },
+                    decided: {
+                        targetMaxChars: specs.maxChars,
+                        styleApplied: specs.style,
+                        formatUsed: specs.format,
+                        finalCharCount: result.content.length,
+                        wasTruncated: result.truncated || false,
+                        hashtagsGenerated: result.hashtags?.length || 0
+                    },
+                    passedOn: {
+                        contentPreview: result.content.substring(0, 150) + (result.content.length > 150 ? '...' : ''),
+                        hook: result.hook,
+                        charCount: result.charCount || result.content.length
+                    }
                 }
             };
 
@@ -160,6 +282,12 @@ Only output valid JSON.
                     hook: content.title,
                     charCount: fallbackContent.length,
                     error: 'Generation failed, using fallback'
+                },
+                trace: {
+                    agent: 'generator',
+                    received: { platform, enrichedContentLength: (ingestResult.enrichedContent || content.data).length },
+                    decided: { usedFallback: true, error: error.message },
+                    passedOn: { contentPreview: fallbackContent.substring(0, 100), charCount: fallbackContent.length }
                 }
             };
         }
