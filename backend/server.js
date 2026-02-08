@@ -23,7 +23,7 @@ const app = express();
 
 // CORS configuration - must be before routes
 app.use(cors({
-  origin: ['http://localhost:3000', 'create-x-6mvj.vercel.app'],
+  origin: ['http://localhost:3000', 'https://create-x-6mvj.vercel.app'],
   credentials: true
 }));
 
