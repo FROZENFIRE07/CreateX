@@ -60,13 +60,26 @@ class ImageGeneratorAgent {
             trace.decided.promptDerived = true;
             trace.decided.promptLength = prompt.length;
 
-            console.log(`[ImageGenerator] Prompt derived: "${prompt.substring(0, 80)}..."`);
+            // Validate prompt
+            if (!prompt || prompt.trim().length === 0) {
+                throw new Error('Generated prompt is empty');
+            }
+            if (prompt.length > 2000) {
+                console.warn(`[ImageGenerator] Prompt too long (${prompt.length} chars), truncating to 2000`);
+                const truncatedPrompt = prompt.substring(0, 1997) + '...';
+                console.log(`[ImageGenerator] Truncated prompt: "${truncatedPrompt.substring(0, 80)}..."`);
+                trace.decided.promptTruncated = true;
+            } else {
+                console.log(`[ImageGenerator] Prompt derived (${prompt.length} chars): "${prompt.substring(0, 80)}..."`);
+            }
+
+            const finalPrompt = prompt.length > 2000 ? prompt.substring(0, 1997) + '...' : prompt;
 
             // Step 3: Get platform-specific dimensions
             const dimensions = this.getPlatformDimensions(platform);
 
             // Step 4: Generate image via API (with fallback chain)
-            const apiResult = await imageAPI.generate(prompt, {
+            const apiResult = await imageAPI.generate(finalPrompt, {
                 ...dimensions,
                 negativePrompt
             });
@@ -105,7 +118,7 @@ class ImageGeneratorAgent {
                 status: 'generated',
                 platform,
                 url: finalUrl,
-                prompt: prompt,  // Log verbatim as required
+                prompt: finalPrompt,  // Log the final prompt (potentially truncated)
                 negativePrompt,
                 dimensions,
                 provider: apiResult.provider,
