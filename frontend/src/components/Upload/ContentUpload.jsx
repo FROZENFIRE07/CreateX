@@ -57,9 +57,12 @@ function ContentUpload() {
         if (!orchestrating || !contentId) return;
 
         console.log('[Frontend SSE] Connecting to stream for contentId:', contentId);
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('saco_token');
+        const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+        const baseUrl = API_BASE_URL.replace('/api', ''); // Remove /api suffix if present
+        
         const eventSource = new EventSource(
-            `http://localhost:5000/api/content/${contentId}/stream?token=${token}`
+            `${baseUrl}/api/content/${contentId}/stream?token=${token}`
         );
 
         eventSource.onopen = () => {

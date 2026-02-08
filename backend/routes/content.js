@@ -280,15 +280,18 @@ router.post('/:id/orchestrate', async (req, res) => {
         content.orchestrationLog = [];
         await content.save();
 
-        // Start orchestration (async - returns immediately)
-        orchestrateInBackground(content, brandDNA, selectedPlatforms, req.userId);
-
+        // Send response first to allow frontend to connect SSE
         res.json({
             message: 'Orchestration started',
             contentId: content._id,
             platforms: selectedPlatforms,
             status: 'processing'
         });
+
+        // Small delay to allow SSE connection to establish
+        setTimeout(() => {
+            orchestrateInBackground(content, brandDNA, selectedPlatforms, req.userId);
+        }, 500); // 500ms delay
     } catch (error) {
         console.error('Orchestration start error:', error);
         res.status(500).json({ error: 'Failed to start orchestration' });
