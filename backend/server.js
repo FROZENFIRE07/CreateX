@@ -11,6 +11,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 
 // Import routes
@@ -20,14 +21,14 @@ const brandRoutes = require('./routes/brand');
 
 const app = express();
 
-// Middleware
-app.use(cors());
-app.use(express.json({ limit: '10mb' })); // Allow larger payloads for content
-
+// CORS configuration - must be before routes
 app.use(cors({
   origin: ['http://localhost:3000', 'create-x-6mvj.vercel.app'],
   credentials: true
 }));
+
+// Middleware
+app.use(express.json({ limit: '10mb' })); // Allow larger payloads for content
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)
@@ -36,6 +37,10 @@ mongoose.connect(process.env.MONGO_URI)
     console.error('❌ MongoDB connection error:', err.message);
     process.exit(1);
   });
+
+// Serve static files for uploaded images (with CORS headers already applied)
+// Note: uploads folder is at project root, so we need to go up one level from backend/
+app.use('/api/images', express.static(path.join(__dirname, '../uploads/images')));
 
 // API Routes
 app.use('/api/auth', authRoutes);

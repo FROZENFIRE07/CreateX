@@ -19,38 +19,38 @@
   --color-bg-tertiary: #334155;
   --color-bg-card: rgba(30, 41, 59, 0.8);
   --color-bg-glass: rgba(255, 255, 255, 0.05);
-  
+
   --color-text-primary: #f8fafc;
   --color-text-secondary: #94a3b8;
   --color-text-muted: #64748b;
-  
+
   --color-accent-primary: #6366f1;
   --color-accent-secondary: #8b5cf6;
   --color-accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
-  
+
   --color-success: #22c55e;
   --color-warning: #f59e0b;
   --color-error: #ef4444;
   --color-info: #3b82f6;
-  
+
   /* Shadows */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
   --shadow-glow: 0 0 30px rgba(99, 102, 241, 0.3);
-  
+
   /* Border radius */
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
   --radius-xl: 24px;
   --radius-full: 9999px;
-  
+
   /* Transitions */
   --transition-fast: 150ms ease;
   --transition-base: 250ms ease;
   --transition-slow: 400ms ease;
-  
+
   /* Font */
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
@@ -58,7 +58,9 @@
 /* ============================================
    Reset & Base Styles
    ============================================ */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -87,7 +89,7 @@ body::before {
   left: 0;
   right: 0;
   bottom: 0;
-  background: 
+  background:
     radial-gradient(ellipse at 20% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
     radial-gradient(ellipse at 80% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 50%);
   pointer-events: none;
@@ -103,7 +105,12 @@ body::before {
 /* ============================================
    Typography
    ============================================ */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: -0.02em;
@@ -117,9 +124,17 @@ h1 {
   background-clip: text;
 }
 
-h2 { font-size: 1.875rem; }
-h3 { font-size: 1.5rem; }
-h4 { font-size: 1.25rem; }
+h2 {
+  font-size: 1.875rem;
+}
+
+h3 {
+  font-size: 1.5rem;
+}
+
+h4 {
+  font-size: 1.25rem;
+}
 
 p {
   color: var(--color-text-secondary);
@@ -669,12 +684,10 @@ a:hover {
 }
 
 .skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--color-bg-tertiary) 0%,
-    var(--color-bg-secondary) 50%,
-    var(--color-bg-tertiary) 100%
-  );
+  background: linear-gradient(90deg,
+      var(--color-bg-tertiary) 0%,
+      var(--color-bg-secondary) 50%,
+      var(--color-bg-tertiary) 100%);
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
   border-radius: var(--radius-sm);
@@ -684,22 +697,43 @@ a:hover {
    Animations
    ============================================ */
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
 }
 
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-fade-in {
@@ -709,29 +743,85 @@ a:hover {
 /* ============================================
    Utility Classes
    ============================================ */
-.text-center { text-align: center; }
-.text-right { text-align: right; }
-.text-muted { color: var(--color-text-muted); }
-.text-success { color: var(--color-success); }
-.text-warning { color: var(--color-warning); }
-.text-error { color: var(--color-error); }
+.text-center {
+  text-align: center;
+}
 
-.flex { display: flex; }
-.flex-col { flex-direction: column; }
-.items-center { align-items: center; }
-.justify-between { justify-content: space-between; }
-.gap-1 { gap: 0.25rem; }
-.gap-2 { gap: 0.5rem; }
-.gap-4 { gap: 1rem; }
+.text-right {
+  text-align: right;
+}
 
-.mt-1 { margin-top: 0.25rem; }
-.mt-2 { margin-top: 0.5rem; }
-.mt-4 { margin-top: 1rem; }
-.mb-1 { margin-bottom: 0.25rem; }
-.mb-2 { margin-bottom: 0.5rem; }
-.mb-4 { margin-bottom: 1rem; }
+.text-muted {
+  color: var(--color-text-muted);
+}
 
-.w-full { width: 100%; }
+.text-success {
+  color: var(--color-success);
+}
+
+.text-warning {
+  color: var(--color-warning);
+}
+
+.text-error {
+  color: var(--color-error);
+}
+
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.gap-1 {
+  gap: 0.25rem;
+}
+
+.gap-2 {
+  gap: 0.5rem;
+}
+
+.gap-4 {
+  gap: 1rem;
+}
+
+.mt-1 {
+  margin-top: 0.25rem;
+}
+
+.mt-2 {
+  margin-top: 0.5rem;
+}
+
+.mt-4 {
+  margin-top: 1rem;
+}
+
+.mb-1 {
+  margin-bottom: 0.25rem;
+}
+
+.mb-2 {
+  margin-bottom: 0.5rem;
+}
+
+.mb-4 {
+  margin-bottom: 1rem;
+}
+
+.w-full {
+  width: 100%;
+}
 
 /* ============================================
    Mobile Hamburger Menu
@@ -843,6 +933,7 @@ a:hover {
 
 /* Tablet and below */
 @media (max-width: 1024px) {
+
   .page-grid,
   .page-grid-wide {
     grid-template-columns: 1fr;
@@ -1063,7 +1154,8 @@ a:hover {
   .form-textarea,
   .form-select {
     padding: 0.65rem 0.85rem;
-    font-size: 1rem; /* 16px to prevent iOS zoom */
+    font-size: 1rem;
+    /* 16px to prevent iOS zoom */
   }
 
   /* Variant content */
@@ -1145,7 +1237,830 @@ a:hover {
     background: transparent;
   }
 
-  .btn, .form-input, .form-textarea, .form-select {
-    min-height: 44px; /* Apple's minimum touch target */
+  .btn,
+  .form-input,
+  .form-textarea,
+  .form-select {
+    min-height: 44px;
+    /* Apple's minimum touch target */
+  }
+}
+
+/* ============================================
+   Platform Preview System
+   Authentic platform-faithful preview styles
+   ============================================ */
+
+/* --- Shared Preview Styles --- */
+.preview-score {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 10;
+}
+
+.preview-score .score-label {
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+
+.preview-score .score-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-accent-primary);
+}
+
+/* --- LinkedIn Preview --- */
+.preview-linkedin {
+  position: relative;
+  background: #1b1f23;
+  border-radius: 8px;
+  border: 1px solid #38434f;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.linkedin-header {
+  display: flex;
+  align-items: flex-start;
+  padding: 12px 16px;
+  gap: 8px;
+}
+
+.linkedin-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0a66c2, #004182);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: white;
+  flex-shrink: 0;
+}
+
+.linkedin-author {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.linkedin-name {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #e7e9ea;
+}
+
+.linkedin-title {
+  font-size: 0.75rem;
+  color: #9ca3b0;
+}
+
+.linkedin-time {
+  font-size: 0.75rem;
+  color: #9ca3b0;
+}
+
+.linkedin-more {
+  background: none;
+  border: none;
+  color: #9ca3b0;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 1rem;
+}
+
+.linkedin-content {
+  padding: 0 16px 12px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #e7e9ea;
+  white-space: pre-wrap;
+}
+
+.linkedin-image {
+  width: 100%;
+  background: #0f1419;
+}
+
+.linkedin-image img {
+  width: 100%;
+  display: block;
+}
+
+.linkedin-engagement {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  border-top: 1px solid #38434f;
+}
+
+.linkedin-reactions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.linkedin-reactions .reaction {
+  font-size: 1rem;
+}
+
+.linkedin-reactions .count {
+  font-size: 0.75rem;
+  color: #9ca3b0;
+  margin-left: 4px;
+}
+
+.linkedin-comments {
+  font-size: 0.75rem;
+  color: #9ca3b0;
+}
+
+.linkedin-actions {
+  display: flex;
+  border-top: 1px solid #38434f;
+  padding: 4px 8px;
+}
+
+.linkedin-actions button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 8px;
+  background: none;
+  border: none;
+  color: #9ca3b0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.linkedin-actions button:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* --- Twitter/X Preview --- */
+.preview-twitter {
+  position: relative;
+  background: #000000;
+  border-radius: 16px;
+  border: 1px solid #2f3336;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.twitter-header {
+  display: flex;
+  align-items: flex-start;
+  padding: 12px 16px 0;
+  gap: 12px;
+}
+
+.twitter-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1d9bf0, #0077b5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+  color: white;
+  flex-shrink: 0;
+}
+
+.twitter-author {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.twitter-name-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.twitter-name {
+  font-weight: 700;
+  font-size: 0.9375rem;
+  color: #e7e9ea;
+}
+
+.twitter-verified {
+  background: #1d9bf0;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.twitter-handle {
+  font-size: 0.9375rem;
+  color: #71767b;
+}
+
+.twitter-more {
+  background: none;
+  border: none;
+  color: #71767b;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.twitter-content {
+  padding: 4px 16px 12px 68px;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  color: #e7e9ea;
+  white-space: pre-wrap;
+}
+
+.twitter-content.over-limit {
+  color: #f4212e;
+}
+
+.twitter-char-warning {
+  padding: 0 16px 8px 68px;
+  font-size: 0.75rem;
+  color: #f4212e;
+}
+
+.twitter-media {
+  margin: 0 16px 12px 68px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #2f3336;
+}
+
+.twitter-media img {
+  width: 100%;
+  display: block;
+}
+
+.twitter-timestamp {
+  padding: 0 16px 12px 68px;
+  font-size: 0.9375rem;
+  color: #71767b;
+}
+
+.twitter-views {
+  color: #e7e9ea;
+}
+
+.twitter-stats {
+  display: flex;
+  gap: 16px;
+  padding: 12px 16px;
+  border-top: 1px solid #2f3336;
+  border-bottom: 1px solid #2f3336;
+  margin-left: 52px;
+}
+
+.twitter-stats span {
+  font-size: 0.875rem;
+  color: #71767b;
+}
+
+.twitter-stats strong {
+  color: #e7e9ea;
+}
+
+.twitter-actions {
+  display: flex;
+  justify-content: space-around;
+  padding: 4px 16px;
+  margin-left: 52px;
+}
+
+.twitter-actions button {
+  background: none;
+  border: none;
+  color: #71767b;
+  font-size: 1.125rem;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.15s;
+}
+
+.twitter-actions button:hover {
+  background: rgba(29, 155, 240, 0.1);
+  color: #1d9bf0;
+}
+
+/* --- Instagram Preview --- */
+.preview-instagram {
+  position: relative;
+  background: #000000;
+  border-radius: 8px;
+  border: 1px solid #262626;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.instagram-header {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  gap: 12px;
+}
+
+.instagram-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: white;
+  flex-shrink: 0;
+}
+
+.instagram-author {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.instagram-username {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #fafafa;
+}
+
+.instagram-location {
+  font-size: 0.75rem;
+  color: #8e8e8e;
+}
+
+.instagram-more {
+  background: none;
+  border: none;
+  color: #fafafa;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.instagram-image {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: #121212;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.instagram-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.instagram-placeholder {
+  text-align: center;
+  color: #8e8e8e;
+}
+
+.instagram-placeholder span {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.instagram-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+}
+
+.instagram-actions-left {
+  display: flex;
+  gap: 16px;
+}
+
+.instagram-actions button {
+  background: none;
+  border: none;
+  color: #fafafa;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+.instagram-save {
+  font-size: 1.5rem !important;
+}
+
+.instagram-likes {
+  padding: 0 16px 8px;
+  font-size: 0.875rem;
+  color: #fafafa;
+}
+
+.instagram-caption {
+  padding: 0 16px 8px;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: #fafafa;
+}
+
+.instagram-caption-author {
+  font-weight: 600;
+  margin-right: 6px;
+}
+
+.instagram-caption-text {
+  color: #fafafa;
+}
+
+.instagram-hashtags {
+  color: #0095f6;
+  display: block;
+  margin-top: 4px;
+}
+
+.instagram-comments-link {
+  padding: 0 16px 8px;
+  font-size: 0.875rem;
+  color: #8e8e8e;
+  cursor: pointer;
+}
+
+.instagram-timestamp {
+  padding: 0 16px 16px;
+  font-size: 0.625rem;
+  color: #8e8e8e;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* --- Blog Preview --- */
+.preview-blog {
+  position: relative;
+  background: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  font-family: Georgia, 'Times New Roman', serif;
+  color: #1a1a1a;
+}
+
+.blog-hero {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #f0f0f0;
+}
+
+.blog-hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.blog-header {
+  padding: 24px 24px 0;
+}
+
+.blog-category {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #6366f1;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.blog-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #1a1a1a;
+  margin-bottom: 16px;
+  background: none;
+  -webkit-text-fill-color: unset;
+}
+
+.blog-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.blog-author {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.blog-author-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 600;
+  color: white;
+}
+
+.blog-author-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.blog-author-name {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #1a1a1a;
+}
+
+.blog-date {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.8125rem;
+  color: #6b7280;
+}
+
+.blog-body {
+  padding: 0 24px 24px;
+}
+
+.blog-excerpt {
+  font-size: 1.125rem;
+  line-height: 1.75;
+  color: #374151;
+  margin-bottom: 16px;
+  font-style: italic;
+}
+
+.blog-content {
+  font-size: 1rem;
+  line-height: 1.8;
+  color: #4b5563;
+  white-space: pre-wrap;
+}
+
+.blog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.blog-tags {
+  display: flex;
+  gap: 8px;
+}
+
+.blog-tag {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.75rem;
+  padding: 4px 12px;
+  background: #e5e7eb;
+  color: #374151;
+  border-radius: 20px;
+}
+
+.blog-share {
+  display: flex;
+  gap: 8px;
+}
+
+.blog-share button {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.8125rem;
+  padding: 6px 12px;
+  background: none;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  color: #4b5563;
+  cursor: pointer;
+}
+
+/* --- Email Preview --- */
+.preview-email {
+  position: relative;
+  background: #1e1e1e;
+  border-radius: 12px;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.email-client {
+  background: #2d2d2d;
+}
+
+.email-client-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #383838;
+  border-bottom: 1px solid #4a4a4a;
+}
+
+.email-client-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.email-client-dots .dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.email-client-dots .red {
+  background: #ff5f57;
+}
+
+.email-client-dots .yellow {
+  background: #ffbd2e;
+}
+
+.email-client-dots .green {
+  background: #28ca42;
+}
+
+.email-client-title {
+  font-size: 0.8125rem;
+  color: #999;
+}
+
+.email-header {
+  padding: 16px;
+  border-bottom: 1px solid #4a4a4a;
+}
+
+.email-field {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 0.8125rem;
+}
+
+.email-label {
+  color: #888;
+  min-width: 60px;
+}
+
+.email-value {
+  color: #e0e0e0;
+}
+
+.email-subject {
+  font-weight: 600;
+}
+
+.email-body {
+  padding: 0;
+  background: #ffffff;
+  color: #333333;
+}
+
+.email-hero {
+  width: 100%;
+}
+
+.email-hero img {
+  width: 100%;
+  display: block;
+}
+
+.email-content {
+  padding: 24px;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.email-cta {
+  padding: 0 24px 24px;
+  text-align: center;
+}
+
+.email-button {
+  display: inline-block;
+  padding: 12px 32px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.email-footer {
+  padding: 24px;
+  border-top: 1px solid #e5e7eb;
+  color: #666;
+  font-size: 0.875rem;
+}
+
+.email-footer p {
+  margin-bottom: 4px;
+  color: #666;
+}
+
+.email-unsubscribe {
+  margin-top: 16px;
+  font-size: 0.75rem;
+  color: #999;
+}
+
+.email-unsubscribe a {
+  color: #6366f1;
+  text-decoration: underline;
+}
+
+/* --- Generic Preview Fallback --- */
+.preview-generic {
+  position: relative;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.preview-generic-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.preview-platform-icon {
+  font-size: 1.25rem;
+}
+
+.preview-platform-name {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.preview-generic-content {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.preview-generic-image {
+  width: 100%;
+  margin-top: 1rem;
+  border-radius: var(--radius-md);
+}
+
+/* --- Preview Grid Container --- */
+.preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .preview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .preview-linkedin,
+  .preview-twitter,
+  .preview-instagram,
+  .preview-blog,
+  .preview-email {
+    border-radius: 0;
   }
 }

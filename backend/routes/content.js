@@ -312,11 +312,14 @@ async function orchestrateInBackground(content, brandDNA, platforms, userId) {
             platform: v.platform,
             content: v.content,
             metadata: v.metadata,
+            image: v.image, // Include generated image URL
             consistencyScore: v.consistencyScore,
             status: v.status,
             feedback: v.feedback
         }));
-        // Note: orchestrationLog is NOT overwritten here - it's written incrementally by orchestrationEmitter
+        
+        // Save orchestration logs to database (from result.log)
+        content.orchestrationLog = result.log || [];
         content.pipelineTrace = result.pipelineTrace; // End-to-end agent observability
         content.kpis = result.kpis;
         content.orchestrationStatus = result.status === 'completed' ? 'completed' : 'failed';

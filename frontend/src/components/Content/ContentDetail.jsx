@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../../services/api';
+import PlatformPreview from '../PlatformPreviews';
 
 const platformIcons = {
     twitter: '🐦',
@@ -16,6 +17,17 @@ const platformIcons = {
 };
 
 const POLL_INTERVAL = 3000; // 3 seconds
+
+// Helper to convert relative image URLs to absolute backend URLs
+const resolveImageUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url; // Already absolute
+    if (url.startsWith('data:')) return url; // Base64 data URL, return as-is
+    const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+    const baseUrl = API_BASE.replace('/api', ''); // Remove /api suffix
+    const absoluteUrl = `${baseUrl}${url}`;
+    return absoluteUrl;
+};
 
 function ContentDetail() {
     const { id } = useParams();
@@ -39,10 +51,12 @@ function ContentDetail() {
     const fetchContent = async () => {
         try {
             const res = await api.get(`/content/${id}`);
+            console.log('[ContentDetail] Fetched content:', res.data.content);
+            console.log('[ContentDetail] Orchestration log:', res.data.content.orchestrationLog);
             setContent(res.data.content);
             setStatus({
                 status: res.data.content.orchestrationStatus,
-                log: res.data.content.orchestrationLog,
+                log: res.data.content.orchestrationLog || [],
                 kpis: res.data.content.kpis,
                 variants: res.data.content.variants
             });
@@ -158,37 +172,17 @@ function ContentDetail() {
                                 </p>
                             </div>
                         ) : status?.variants?.length > 0 ? (
-                            <div className="variant-grid" style={{ gridTemplateColumns: '1fr' }}>
+                            <div className="preview-grid">
                                 {status.variants.map((variant, idx) => (
-                                    <div key={idx} className="variant-card card" style={{ marginBottom: '1rem' }}>
-                                        <div className="variant-header">
-                                            <div className="variant-platform">
-                                                <span style={{ fontSize: '1.25rem' }}>{platformIcons[variant.platform]}</span>
-                                                <span>{variant.platform}</span>
-                                            </div>
-                                            <StatusBadge status={variant.status} />
-                                        </div>
-                                        <div className="variant-content">
-                                            {variant.content}
-                                        </div>
-                                        {variant.consistencyScore && (
-                                            <div className="variant-score">
-                                                <span className="text-muted" style={{ fontSize: '0.75rem' }}>Consistency:</span>
-                                                <div className="score-bar">
-                                                    <div
-                                                        className="score-fill"
-                                                        style={{ width: `${variant.consistencyScore}%` }}
-                                                    ></div>
-                                                </div>
-                                                <span className="score-value">{variant.consistencyScore}%</span>
-                                            </div>
-                                        )}
-                                        {variant.feedback && (
-                                            <p className="text-muted mt-2" style={{ fontSize: '0.75rem' }}>
-                                                {variant.feedback}
-                                            </p>
-                                        )}
-                                    </div>
+                                    <PlatformPreview
+                                        key={idx}
+                                        platform={variant.platform}
+                                        content={variant.content}
+                                        image={resolveImageUrl(variant.image?.url)}
+                                        score={variant.consistencyScore}
+                                        title={content?.title}
+                                        authorName="Your Brand"
+                                    />
                                 ))}
                             </div>
                         ) : (

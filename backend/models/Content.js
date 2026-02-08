@@ -24,6 +24,11 @@ const variantSchema = new mongoose.Schema({
         hashtags: [String],
         formatting: String
     },
+    image: {
+        url: String,
+        prompt: String,
+        provider: String
+    },
     consistencyScore: {
         type: Number,
         min: 0,
@@ -38,6 +43,53 @@ const variantSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     }
+});
+
+// Image schema for AI-generated images
+const imageSchema = new mongoose.Schema({
+    platform: {
+        type: String,
+        enum: ['twitter', 'linkedin', 'email', 'instagram', 'blog', 'generic'],
+        required: true
+    },
+    url: {
+        type: String,
+        required: true
+    },
+    prompt: {
+        type: String,  // Full prompt used for generation
+        required: true
+    },
+    negativePrompt: String,
+    dimensions: {
+        width: Number,
+        height: Number,
+        aspectRatio: String  // "16:9", "1:1", etc.
+    },
+    fileSize: Number,  // bytes
+    format: String,  // "png", "jpg", "webp"
+    consistencyScore: {
+        type: Number,
+        min: 0,
+        max: 100
+    },
+    status: {
+        type: String,
+        enum: ['pending', 'approved', 'flagged', 'published'],
+        default: 'pending'
+    },
+    metadata: {
+        apiUsed: String,  // "stability-ai", "dall-e-3", "replicate"
+        modelVersion: String,
+        generationTime: Number,  // milliseconds
+        dominantColors: [String],  // hex codes
+        styleUsed: String  // "abstract-minimalist", "tech-gradient"
+    },
+    generatedAt: {
+        type: Date,
+        default: Date.now
+    },
+    feedback: String  // Reviewer feedback if flagged
 });
 
 // Main content schema - extensible for future media types
@@ -74,6 +126,13 @@ const contentSchema = new mongoose.Schema({
     vectorId: String,
     // Repurposed variants from COPE pipeline
     variants: [variantSchema],
+    // AI-generated images for content
+    images: [imageSchema],
+    // Image generation toggle
+    imageGenerationEnabled: {
+        type: Boolean,
+        default: false
+    },
     // Orchestration status
     orchestrationStatus: {
         type: String,

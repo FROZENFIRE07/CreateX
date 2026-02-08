@@ -24,6 +24,7 @@ const ingestAgent = require('./ingestAgent');
 const generatorAgent = require('./generatorAgent');
 const reviewerAgent = require('./reviewerAgent');
 const publisherAgent = require('./publisherAgent');
+const imageGeneratorAgent = require('./imageGeneratorAgent');
 
 // State management
 const AgentState = require('./agentState');
@@ -295,6 +296,12 @@ Output only valid JSON.
         // Execute Ingest
         await this.executeIngest(state);
 
+        // Execute Image Generation (optional, non-blocking)
+        // Images are treated as enrichments, not core outputs
+        this.executeImageGeneration(state).catch(err => {
+            console.log('[Manager] Image generation skipped:', err.message);
+        });
+
         // Execute per-platform: Generate → Review → Verify
         for (const platform of state.platforms) {
             let success = false;
@@ -331,8 +338,87 @@ Output only valid JSON.
             }
         }
 
+        // Wait for image generation to complete before publishing
+        if (state.imageGenerationPromise) {
+            try {
+                await state.imageGenerationPromise;
+            } catch (err) {
+                console.log('[Manager] Image generation promise rejected:', err.message);
+            }
+        }
+
         // Publish approved variants
         await this.executePublisher(state);
+    }
+
+    /**
+     * Execute Image Generation (optional enrichment)
+     * Non-blocking - failure does not affect text pipeline
+     */
+    async executeImageGeneration(state) {
+        // Check if image generation should be attempted
+        const shouldGenerate = imageGeneratorAgent.shouldGenerate(state.content, state.brandDNA);
+
+        if (!shouldGenerate) {
+            console.log('[Manager] Image generation disabled, skipping');
+            state.imageGeneration = { status: 'skipped', reason: 'disabled' };
+            return;
+        }
+
+        console.log('[Manager] Starting image generation (non-blocking)...');
+        emit(state.contentId, '🎨 Starting autonomous image generation...');
+        emit(state.contentId, '  → Deriving visual intent from content context...');
+
+        // Initialize tracking
+        state.imageGeneration = {
+            status: 'attempted',
+            images: [],
+            startedAt: Date.now()
+        };
+
+        // Store promise so we can await before publishing
+        state.imageGenerationPromise = (async () => {
+            try {
+                // Generate one image for generic use (can expand per-platform later)
+                const result = await imageGeneratorAgent.generate(
+                    state.content,
+                    state.ingest,
+                    state.brandDNA,
+                    'generic'
+                );
+
+                if (result.status === 'generated') {
+                    state.imageGeneration.status = 'succeeded';
+                    state.imageGeneration.images.push(result);
+
+                    emit(state.contentId, `🎨 ✅ Image generated via ${result.provider}`);
+                    emit(state.contentId, `  → Prompt: "${result.prompt.substring(0, 60)}..."`);
+
+                    if (result.fallbackOccurred) {
+                        emit(state.contentId, `  → Note: Fallback provider used`);
+                    }
+
+                    // Record trace
+                    if (result.trace) {
+                        state.pipelineTrace.push(result.trace);
+                    }
+
+                    state.recordDecision('imageGeneration', 'completed', `Generated via ${result.provider}`);
+                } else {
+                    state.imageGeneration.status = 'failed';
+                    state.imageGeneration.error = result.error;
+
+                    emit(state.contentId, `🎨 ⚠️ Image generation failed: ${result.error}`);
+                    state.recordDecision('imageGeneration', 'failed', result.error);
+                }
+
+            } catch (error) {
+                state.imageGeneration.status = 'failed';
+                state.imageGeneration.error = error.message;
+                console.log('[Manager] Image generation error:', error.message);
+                state.recordDecision('imageGeneration', 'failed', error.message);
+            }
+        })();
     }
 
     /**
@@ -555,6 +641,17 @@ Output only valid JSON.
                     status: 'approved'
                 };
 
+                // Attach image if available
+                if (state.imageGeneration?.status === 'succeeded' && state.imageGeneration.images?.length > 0) {
+                    const image = state.imageGeneration.images[0];
+                    variant.image = {
+                        url: image.url,
+                        prompt: image.prompt,
+                        provider: image.provider
+                    };
+                    emit(state.contentId, `  → Attaching generated image to ${platform}`);
+                }
+
                 const published = await publisherAgent.format(variant);
                 state.published.push(platform);
 
@@ -615,7 +712,7 @@ Output only valid JSON.
             const review = state.reviews[platform];
             const fallbackContent = `[Content generation failed for ${platform}]`;
 
-            return {
+            const variant = {
                 platform,
                 content: draft?.content || fallbackContent,
                 metadata: draft?.metadata || {},
@@ -623,6 +720,18 @@ Output only valid JSON.
                 status: state.reviews[platform]?.passed ? 'approved' : 'flagged',
                 feedback: state.reviews[platform]?.feedback || ''
             };
+
+            // Attach image if available
+            if (state.imageGeneration?.status === 'succeeded' && state.imageGeneration.images?.length > 0) {
+                const image = state.imageGeneration.images[0];
+                variant.image = {
+                    url: image.url,
+                    prompt: image.prompt,
+                    provider: image.provider
+                };
+            }
+
+            return variant;
         });
 
         // Manager summary trace
