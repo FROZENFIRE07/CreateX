@@ -42,8 +42,23 @@ const variantSchema = new mongoose.Schema({
     generatedAt: {
         type: Date,
         default: Date.now
-    }
+    },
+    // Manager Agent state tracking fields
+    isUserModified: {
+        type: Boolean,
+        default: false
+    },
+    isLocked: {
+        type: Boolean,
+        default: false
+    },
+    generationHistory: [{
+        content: String,
+        generatedAt: { type: Date, default: Date.now },
+        source: { type: String, enum: ['manager', 'orchestration', 'user'], default: 'orchestration' }
+    }]
 });
+
 
 // Image schema for AI-generated images
 const imageSchema = new mongoose.Schema({
@@ -132,6 +147,12 @@ const contentSchema = new mongoose.Schema({
     imageGenerationEnabled: {
         type: Boolean,
         default: false
+    },
+    // Manager Agent: Project-level state overrides (affect future generations)
+    projectStateOverrides: {
+        toneOverride: String,      // e.g., "more opinionated", "casual"
+        audienceOverride: String,  // e.g., "founders instead of marketers"
+        customInstructions: String // free-form project-level guidance
     },
     // Orchestration status
     orchestrationStatus: {

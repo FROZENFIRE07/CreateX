@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../../services/api';
 import PlatformPreview from '../PlatformPreviews';
+import ManagerPanel from '../ManagerPanel/ManagerPanel';
 
 const platformIcons = {
     twitter: '🐦',
@@ -193,34 +194,14 @@ function ContentDetail() {
                     </div>
                 </div>
 
-                {/* Sidebar - Workflow Log */}
+                {/* Sidebar - Manager Agent Panel */}
                 <div>
-                    <div className="card workflow-sidebar" style={{ position: 'sticky', top: '80px' }}>
-                        <div className="card-header">
-                            <h3 className="card-title">Workflow Log</h3>
-                        </div>
-                        <div className="workflow-steps">
-                            {status?.log?.length > 0 ? (
-                                status.log.slice(-8).map((entry, idx) => (
-                                    <div
-                                        key={idx}
-                                        className={`workflow-step ${idx === status.log.length - 1 && status.status === 'processing' ? 'active' : 'completed'}`}
-                                    >
-                                        <div className="workflow-step-icon">
-                                            {getAgentIcon(entry.agent)}
-                                        </div>
-                                        <div className="workflow-step-content">
-                                            <div className="workflow-step-title">{entry.agent}</div>
-                                            <div className="workflow-step-desc">{entry.action}</div>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <p className="text-muted text-center">No log entries yet</p>
-                            )}
-                        </div>
-                    </div>
+                    <ManagerPanel
+                        contentId={id}
+                        onVariantsUpdated={fetchContent}
+                    />
                 </div>
+
             </div>
         </div>
     );

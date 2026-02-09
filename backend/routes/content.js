@@ -2,8 +2,8 @@
  * Content Routes
  * CRUD operations and orchestration trigger for content
  * 
- * Main endpoint: POST /api/content/orchestrate
- * Triggers the multi-agent COPE pipeline
+ * Phase 2: Orchestration now routes through Manager Agent
+ * to enforce the architectural invariant.
  */
 
 const express = require('express');
@@ -12,10 +12,12 @@ const BrandDNA = require('../models/BrandDNA');
 const User = require('../models/User');
 const authMiddleware = require('../middleware/auth');
 const managerAgent = require('../services/agents/managerAgent');
+const managerInteract = require('../services/agents/managerInteract');
 const contentHandler = require('../services/contentHandler');
 const orchestrationEmitter = require('../services/orchestrationEmitter');
 
 const router = express.Router();
+
 
 /**
  * GET /api/content/:id/stream
@@ -242,7 +244,8 @@ router.get('/:id', async (req, res) => {
 /**
  * POST /api/content/:id/orchestrate
  * Trigger COPE pipeline for content transformation
- * This is the main agent orchestration endpoint
+ * 
+ * Phase 2: Routed through Manager Agent for authority enforcement
  */
 router.post('/:id/orchestrate', async (req, res) => {
     try {
@@ -271,10 +274,6 @@ router.post('/:id/orchestrate', async (req, res) => {
             return res.status(409).json({ error: 'Orchestration already in progress' });
         }
 
-        // Get brand DNA if exists
-        const user = await User.findById(req.userId).populate('brandDNA');
-        const brandDNA = user?.brandDNA || null;
-
         // Update status to processing
         content.orchestrationStatus = 'processing';
         content.orchestrationLog = [];
@@ -282,21 +281,41 @@ router.post('/:id/orchestrate', async (req, res) => {
 
         // Send response first to allow frontend to connect SSE
         res.json({
-            message: 'Orchestration started',
+            message: 'Orchestration started via Manager',
             contentId: content._id,
             platforms: selectedPlatforms,
             status: 'processing'
         });
 
-        // Small delay to allow SSE connection to establish
-        setTimeout(() => {
-            orchestrateInBackground(content, brandDNA, selectedPlatforms, req.userId);
-        }, 500); // 500ms delay
+        // Phase 2: Route through Manager Agent for authority enforcement
+        // This ensures the architectural invariant: all generation passes through Manager
+        setTimeout(async () => {
+            try {
+                console.log(`[Orchestrator] Routing through Manager for content: ${content._id}`);
+                const platformList = selectedPlatforms.join(', ');
+                await managerInteract.interact(
+                    content._id,
+                    `Execute full orchestration pipeline for platforms: ${platformList}`,
+                    req.userId
+                );
+            } catch (error) {
+                console.error(`[Orchestrator] Manager routing failed for ${content._id}:`, error);
+                content.orchestrationStatus = 'failed';
+                content.orchestrationLog.push({
+                    agent: 'system',
+                    action: 'error',
+                    timestamp: new Date(),
+                    details: { error: error.message }
+                });
+                await content.save();
+            }
+        }, 500);
     } catch (error) {
         console.error('Orchestration start error:', error);
         res.status(500).json({ error: 'Failed to start orchestration' });
     }
 });
+
 
 /**
  * Background orchestration function
@@ -320,7 +339,7 @@ async function orchestrateInBackground(content, brandDNA, platforms, userId) {
             status: v.status,
             feedback: v.feedback
         }));
-        
+
         // Save orchestration logs to database (from result.log)
         content.orchestrationLog = result.log || [];
         content.pipelineTrace = result.pipelineTrace; // End-to-end agent observability

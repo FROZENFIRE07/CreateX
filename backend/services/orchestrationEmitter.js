@@ -19,7 +19,7 @@ class OrchestrationEmitter extends EventEmitter {
     log(contentId, message) {
         // Ensure contentId is always a string for consistent event names
         const idString = String(contentId);
-        
+
         const payload = {
             type: 'log',
             message,
@@ -37,6 +37,71 @@ class OrchestrationEmitter extends EventEmitter {
         console.log(`[OrchEmitter] Emitting to "${eventName}" - listeners: ${this.listenerCount(eventName)}`);
         this.emit(eventName, payload);
     }
+
+    /**
+     * Manager Agent: Emit a decision narration (authority-style)
+     * e.g., "Decided to authorize full orchestration, skipping locked variants"
+     */
+    decision(contentId, message) {
+        const idString = String(contentId);
+        const payload = {
+            type: 'manager_decision',
+            message,
+            timestamp: new Date().toISOString()
+        };
+
+        if (!this.history.has(idString)) {
+            this.history.set(idString, []);
+        }
+        this.history.get(idString).push(payload);
+
+        this.emit(`decision:${idString}`, payload);
+        // Also emit to log channel for backwards compatibility
+        this.emit(`log:${idString}`, payload);
+    }
+
+    /**
+     * Manager Agent: Emit execution progress (pipeline step updates)
+     */
+    progress(contentId, message, step = null) {
+        const idString = String(contentId);
+        const payload = {
+            type: 'execution_progress',
+            message,
+            step,
+            timestamp: new Date().toISOString()
+        };
+
+        if (!this.history.has(idString)) {
+            this.history.set(idString, []);
+        }
+        this.history.get(idString).push(payload);
+
+        this.emit(`progress:${idString}`, payload);
+        this.emit(`log:${idString}`, payload);
+    }
+
+    /**
+     * Manager Agent: Emit execution result (outcomes, state changes)
+     */
+    result(contentId, data, message = null) {
+        const idString = String(contentId);
+        const payload = {
+            type: 'execution_result',
+            message: message || 'Execution completed',
+            data,
+            timestamp: new Date().toISOString()
+        };
+
+        if (!this.history.has(idString)) {
+            this.history.set(idString, []);
+        }
+        this.history.get(idString).push(payload);
+
+        this.emit(`result:${idString}`, payload);
+        this.emit(`log:${idString}`, payload);
+    }
+
 
     /**
      * Emit a step update

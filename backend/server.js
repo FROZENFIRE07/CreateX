@@ -18,6 +18,7 @@ require('dotenv').config();
 const authRoutes = require('./routes/auth');
 const contentRoutes = require('./routes/content');
 const brandRoutes = require('./routes/brand');
+const managerRoutes = require('./routes/manager');
 
 const app = express();
 
@@ -46,11 +47,12 @@ app.use('/api/images', express.static(path.join(__dirname, '../uploads/images'))
 app.use('/api/auth', authRoutes);
 app.use('/api/content', contentRoutes);
 app.use('/api/brand', brandRoutes);
+app.use('/api/manager', managerRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
+  res.json({
+    status: 'ok',
     timestamp: new Date().toISOString(),
     service: 'SACO Backend'
   });
@@ -59,7 +61,7 @@ app.get('/api/health', (req, res) => {
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Server Error:', err);
-  res.status(500).json({ 
+  res.status(500).json({
     error: 'Internal server error',
     message: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
