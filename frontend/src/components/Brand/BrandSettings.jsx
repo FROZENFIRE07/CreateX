@@ -1,29 +1,203 @@
 /**
- * Brand Settings Component
- * Manage brand DNA for content consistency
+ * Brand Settings Component - Redesigned
+ * Modern multi-step wizard with color picker and visual feedback
  */
 
 import React, { useState, useEffect } from 'react';
+import {
+    Box,
+    Flex,
+    VStack,
+    HStack,
+    Heading,
+    Text,
+    Input,
+    Textarea,
+    Button,
+    Badge,
+    SimpleGrid,
+    Select,
+    Progress,
+    Icon,
+    Wrap,
+    WrapItem,
+    Tag,
+    TagLabel,
+    TagCloseButton,
+    Spinner,
+    Center,
+} from '@chakra-ui/react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+    FiCheck,
+    FiChevronRight,
+    FiChevronLeft,
+    FiSave,
+    FiTarget,
+    FiMessageCircle,
+    FiHeart,
+    FiUsers,
+    FiZap,
+    FiAlertCircle,
+    FiCheckCircle,
+} from 'react-icons/fi';
+import { HexColorPicker } from 'react-colorful';
 import api from '../../services/api';
+import { showToast } from '../common';
+
+const MotionBox = motion(Box);
 
 const TONE_OPTIONS = [
-    'professional',
-    'casual',
-    'inspirational',
-    'authoritative',
-    'friendly',
-    'formal',
-    'playful'
+    { value: 'professional', label: 'Professional', icon: '💼', desc: 'Formal and business-focused' },
+    { value: 'casual', label: 'Casual', icon: '😊', desc: 'Relaxed and friendly' },
+    { value: 'inspirational', label: 'Inspirational', icon: '✨', desc: 'Motivating and uplifting' },
+    { value: 'authoritative', label: 'Authoritative', icon: '🎓', desc: 'Expert and confident' },
+    { value: 'friendly', label: 'Friendly', icon: '🤝', desc: 'Warm and approachable' },
+    { value: 'playful', label: 'Playful', icon: '🎉', desc: 'Fun and energetic' },
 ];
 
+const STEPS = [
+    { id: 1, title: 'Brand Identity', icon: FiTarget },
+    { id: 2, title: 'Voice & Tone', icon: FiMessageCircle },
+    { id: 3, title: 'Values & Keywords', icon: FiHeart },
+    { id: 4, title: 'Audience', icon: FiUsers },
+];
+
+// Step Indicator Component
+const StepIndicator = ({ steps, currentStep }) => (
+    <HStack spacing={0} w="full" justify="space-between" mb={8}>
+        {steps.map((step, idx) => (
+            <React.Fragment key={step.id}>
+                <VStack spacing={2}>
+                    <Box
+                        bg={currentStep >= step.id ? 'brand.500' : 'surface.bg'}
+                        border="2px solid"
+                        borderColor={currentStep >= step.id ? 'brand.500' : 'surface.border'}
+                        borderRadius="full"
+                        w={12}
+                        h={12}
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
+                        transition="all 0.3s"
+                    >
+                        {currentStep > step.id ? (
+                            <Icon as={FiCheck} color="white" boxSize={5} />
+                        ) : (
+                            <Icon as={step.icon} color={currentStep >= step.id ? 'white' : 'gray.500'} boxSize={5} />
+                        )}
+                    </Box>
+                    <Text
+                        fontSize="xs"
+                        color={currentStep >= step.id ? 'white' : 'gray.500'}
+                        fontWeight={currentStep === step.id ? '600' : '400'}
+                        display={{ base: 'none', md: 'block' }}
+                    >
+                        {step.title}
+                    </Text>
+                </VStack>
+                {idx < steps.length - 1 && (
+                    <Box
+                        flex={1}
+                        h="2px"
+                        bg={currentStep > step.id ? 'brand.500' : 'surface.border'}
+                        mx={2}
+                        transition="all 0.3s"
+                    />
+                )}
+            </React.Fragment>
+        ))}
+    </HStack>
+);
+
+// Tone Card Component
+const ToneCard = ({ tone, selected, onClick }) => (
+    <MotionBox
+        as="button"
+        type="button"
+        onClick={onClick}
+        bg={selected ? 'rgba(99, 102, 241, 0.15)' : 'surface.bg'}
+        border="2px solid"
+        borderColor={selected ? 'brand.500' : 'surface.border'}
+        borderRadius="xl"
+        p={4}
+        textAlign="center"
+        cursor="pointer"
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        transition={{ duration: 0.2 }}
+        w="full"
+    >
+        <Text fontSize="2xl" mb={2}>{tone.icon}</Text>
+        <Text fontWeight="600" color="white" fontSize="sm">{tone.label}</Text>
+        <Text fontSize="xs" color="gray.500">{tone.desc}</Text>
+    </MotionBox>
+);
+
+// Tag Input Component
+const TagInput = ({ value, onChange, placeholder }) => {
+    const [inputValue, setInputValue] = useState('');
+    const tags = value ? value.split(',').map(t => t.trim()).filter(Boolean) : [];
+
+    const addTag = (tag) => {
+        if (tag && !tags.includes(tag)) {
+            onChange([...tags, tag].join(', '));
+        }
+        setInputValue('');
+    };
+
+    const removeTag = (tagToRemove) => {
+        onChange(tags.filter(t => t !== tagToRemove).join(', '));
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            addTag(inputValue.trim());
+        }
+    };
+
+    return (
+        <Box>
+            <Wrap spacing={2} mb={2}>
+                {tags.map((tag, idx) => (
+                    <WrapItem key={idx}>
+                        <Tag
+                            size="md"
+                            borderRadius="full"
+                            variant="subtle"
+                            colorScheme="purple"
+                        >
+                            <TagLabel>{tag}</TagLabel>
+                            <TagCloseButton onClick={() => removeTag(tag)} />
+                        </Tag>
+                    </WrapItem>
+                ))}
+            </Wrap>
+            <Input
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onBlur={() => inputValue && addTag(inputValue.trim())}
+                placeholder={placeholder}
+                bg="surface.bg"
+                border="1px solid"
+                borderColor="surface.border"
+                _hover={{ borderColor: 'surface.borderHover' }}
+                _focus={{ borderColor: 'brand.500', boxShadow: '0 0 0 1px #6366f1' }}
+            />
+            <Text fontSize="xs" color="gray.600" mt={1}>Press Enter or comma to add</Text>
+        </Box>
+    );
+};
+
 function BrandSettings() {
-    const [brandDNA, setBrandDNA] = useState(null);
+    const [currentStep, setCurrentStep] = useState(1);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
+    const [brandColor, setBrandColor] = useState('#6366f1');
+    const [showColorPicker, setShowColorPicker] = useState(false);
 
-    // Form state
     const [form, setForm] = useState({
         name: '',
         tone: 'professional',
@@ -43,7 +217,6 @@ function BrandSettings() {
             const res = await api.get('/brand');
             if (res.data.brandDNA) {
                 const b = res.data.brandDNA;
-                setBrandDNA(b);
                 setForm({
                     name: b.name || '',
                     tone: b.guidelines?.tone || 'professional',
@@ -53,6 +226,7 @@ function BrandSettings() {
                     avoidWords: b.guidelines?.avoidWords?.join(', ') || '',
                     targetAudience: b.guidelines?.targetAudience || ''
                 });
+                if (b.brandColor) setBrandColor(b.brandColor);
             }
         } catch (err) {
             console.error('Brand fetch error:', err);
@@ -61,15 +235,13 @@ function BrandSettings() {
         }
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    const handleSubmit = async () => {
         setSaving(true);
-        setError('');
-        setSuccess('');
 
         try {
             const payload = {
                 name: form.name,
+                brandColor,
                 guidelines: {
                     tone: form.tone,
                     voice: form.voice,
@@ -81,198 +253,374 @@ function BrandSettings() {
             };
 
             await api.post('/brand', payload);
-            setSuccess('Brand DNA saved successfully!');
+            showToast.success('Brand DNA saved successfully!');
             fetchBrandDNA();
         } catch (err) {
-            setError(err.response?.data?.error || 'Failed to save');
+            showToast.error(err.response?.data?.error || 'Failed to save');
         } finally {
             setSaving(false);
         }
     };
 
+    const nextStep = () => {
+        if (currentStep < 4) setCurrentStep(currentStep + 1);
+    };
+
+    const prevStep = () => {
+        if (currentStep > 1) setCurrentStep(currentStep - 1);
+    };
+
+    const isStepValid = () => {
+        switch (currentStep) {
+            case 1: return form.name.trim().length > 0;
+            case 2: return form.tone;
+            case 3: return true;
+            case 4: return true;
+            default: return true;
+        }
+    };
+
     if (loading) {
         return (
-            <div className="flex items-center justify-center" style={{ minHeight: '50vh' }}>
-                <div className="spinner"></div>
-            </div>
+            <Center h="50vh">
+                <Spinner size="xl" color="brand.500" />
+            </Center>
         );
     }
 
     return (
-        <div className="animate-fade-in">
-            <div className="mb-4">
-                <h1>Brand DNA</h1>
-                <p className="mt-1">Define your brand voice for consistent content generation</p>
-            </div>
+        <VStack spacing={6} align="stretch">
+            {/* Header */}
+            <MotionBox
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+            >
+                <Heading size="lg" color="white">Brand DNA</Heading>
+                <Text color="gray.400" mt={1}>Define your brand voice for consistent content generation</Text>
+            </MotionBox>
 
-            <div className="page-grid-wide">
-                {/* Form */}
-                <div className="card">
-                    <form onSubmit={handleSubmit}>
-                        <div className="form-group">
-                            <label className="form-label">Brand Name</label>
-                            <input
-                                type="text"
-                                className="form-input"
-                                value={form.name}
-                                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                placeholder="e.g., Acme Corp"
-                                required
-                            />
-                        </div>
+            <SimpleGrid columns={{ base: 1, lg: 3 }} spacing={6}>
+                {/* Main Form */}
+                <Box gridColumn={{ lg: 'span 2' }}>
+                    <MotionBox
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        bg="surface.card"
+                        borderRadius="xl"
+                        border="1px solid"
+                        borderColor="surface.border"
+                        p={6}
+                    >
+                        {/* Step Indicator */}
+                        <StepIndicator steps={STEPS} currentStep={currentStep} />
 
-                        <div className="form-group">
-                            <label className="form-label">Tone of Voice</label>
-                            <select
-                                className="form-select"
-                                value={form.tone}
-                                onChange={(e) => setForm({ ...form, tone: e.target.value })}
-                            >
-                                {TONE_OPTIONS.map(tone => (
-                                    <option key={tone} value={tone}>
-                                        {tone.charAt(0).toUpperCase() + tone.slice(1)}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                        {/* Step Content */}
+                        <AnimatePresence mode="wait">
+                            {currentStep === 1 && (
+                                <MotionBox
+                                    key="step1"
+                                    initial={{ opacity: 0, x: 20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: -20 }}
+                                >
+                                    <VStack spacing={6} align="stretch">
+                                        <Box>
+                                            <Text fontWeight="500" color="gray.300" fontSize="sm" mb={2}>Brand Name *</Text>
+                                            <Input
+                                                value={form.name}
+                                                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                                                placeholder="e.g., Acme Corp"
+                                                size="lg"
+                                                bg="surface.bg"
+                                                border="1px solid"
+                                                borderColor="surface.border"
+                                                _hover={{ borderColor: 'surface.borderHover' }}
+                                                _focus={{ borderColor: 'brand.500', boxShadow: '0 0 0 1px #6366f1' }}
+                                            />
+                                        </Box>
 
-                        <div className="form-group">
-                            <label className="form-label">Brand Voice Statement</label>
-                            <textarea
-                                className="form-textarea"
-                                value={form.voice}
-                                onChange={(e) => setForm({ ...form, voice: e.target.value })}
-                                placeholder="Describe how your brand speaks. e.g., 'We communicate with clarity and confidence. We're experts who make complex topics accessible...'"
-                                style={{ minHeight: '100px' }}
-                            />
-                        </div>
-
-                        <div className="form-group">
-                            <label className="form-label">Core Values</label>
-                            <input
-                                type="text"
-                                className="form-input"
-                                value={form.values}
-                                onChange={(e) => setForm({ ...form, values: e.target.value })}
-                                placeholder="e.g., innovation, trust, simplicity (comma-separated)"
-                            />
-                            <p className="text-muted mt-1" style={{ fontSize: '0.75rem' }}>
-                                Comma-separated list of brand values
-                            </p>
-                        </div>
-
-                        <div className="form-group">
-                            <label className="form-label">Must-Use Keywords</label>
-                            <input
-                                type="text"
-                                className="form-input"
-                                value={form.keywords}
-                                onChange={(e) => setForm({ ...form, keywords: e.target.value })}
-                                placeholder="e.g., AI-powered, seamless, innovative"
-                            />
-                        </div>
-
-                        <div className="form-group">
-                            <label className="form-label">Words to Avoid</label>
-                            <input
-                                type="text"
-                                className="form-input"
-                                value={form.avoidWords}
-                                onChange={(e) => setForm({ ...form, avoidWords: e.target.value })}
-                                placeholder="e.g., cheap, basic, easy"
-                            />
-                        </div>
-
-                        <div className="form-group">
-                            <label className="form-label">Target Audience</label>
-                            <input
-                                type="text"
-                                className="form-input"
-                                value={form.targetAudience}
-                                onChange={(e) => setForm({ ...form, targetAudience: e.target.value })}
-                                placeholder="e.g., Tech-savvy marketers aged 25-45"
-                            />
-                        </div>
-
-                        {error && <p className="form-error mb-4">{error}</p>}
-                        {success && (
-                            <p className="text-success mb-4" style={{ fontSize: '0.875rem' }}>{success}</p>
-                        )}
-
-                        <button
-                            type="submit"
-                            className="btn btn-primary w-full"
-                            disabled={saving}
-                        >
-                            {saving ? (
-                                <>
-                                    <span className="spinner spinner-sm"></span>
-                                    Saving...
-                                </>
-                            ) : (
-                                'Save Brand DNA'
+                                        <Box>
+                                            <Text fontWeight="500" color="gray.300" fontSize="sm" mb={2}>Brand Color</Text>
+                                            <HStack spacing={4}>
+                                                <Box
+                                                    as="button"
+                                                    w={12}
+                                                    h={12}
+                                                    borderRadius="lg"
+                                                    bg={brandColor}
+                                                    border="2px solid"
+                                                    borderColor="white"
+                                                    boxShadow={`0 0 20px ${brandColor}40`}
+                                                    cursor="pointer"
+                                                    onClick={() => setShowColorPicker(!showColorPicker)}
+                                                />
+                                                <Input
+                                                    value={brandColor}
+                                                    onChange={(e) => setBrandColor(e.target.value)}
+                                                    maxW="120px"
+                                                    bg="surface.bg"
+                                                    border="1px solid"
+                                                    borderColor="surface.border"
+                                                />
+                                            </HStack>
+                                            {showColorPicker && (
+                                                <Box mt={4} p={4} bg="surface.bg" borderRadius="lg">
+                                                    <HexColorPicker color={brandColor} onChange={setBrandColor} />
+                                                </Box>
+                                            )}
+                                        </Box>
+                                    </VStack>
+                                </MotionBox>
                             )}
-                        </button>
-                    </form>
-                </div>
+
+                            {currentStep === 2 && (
+                                <MotionBox
+                                    key="step2"
+                                    initial={{ opacity: 0, x: 20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: -20 }}
+                                >
+                                    <VStack spacing={6} align="stretch">
+                                        <Box>
+                                            <Text fontWeight="500" color="gray.300" fontSize="sm" mb={3}>Tone of Voice</Text>
+                                            <SimpleGrid columns={{ base: 2, md: 3 }} spacing={3}>
+                                                {TONE_OPTIONS.map(tone => (
+                                                    <ToneCard
+                                                        key={tone.value}
+                                                        tone={tone}
+                                                        selected={form.tone === tone.value}
+                                                        onClick={() => setForm({ ...form, tone: tone.value })}
+                                                    />
+                                                ))}
+                                            </SimpleGrid>
+                                        </Box>
+
+                                        <Box>
+                                            <Text fontWeight="500" color="gray.300" fontSize="sm" mb={2}>Brand Voice Statement</Text>
+                                            <Textarea
+                                                value={form.voice}
+                                                onChange={(e) => setForm({ ...form, voice: e.target.value })}
+                                                placeholder="Describe how your brand speaks. e.g., 'We communicate with clarity and confidence...'"
+                                                minH="120px"
+                                                bg="surface.bg"
+                                                border="1px solid"
+                                                borderColor="surface.border"
+                                                _hover={{ borderColor: 'surface.borderHover' }}
+                                                _focus={{ borderColor: 'brand.500', boxShadow: '0 0 0 1px #6366f1' }}
+                                            />
+                                        </Box>
+                                    </VStack>
+                                </MotionBox>
+                            )}
+
+                            {currentStep === 3 && (
+                                <MotionBox
+                                    key="step3"
+                                    initial={{ opacity: 0, x: 20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: -20 }}
+                                >
+                                    <VStack spacing={6} align="stretch">
+                                        <Box>
+                                            <Text fontWeight="500" color="gray.300" fontSize="sm" mb={2}>Core Values</Text>
+                                            <TagInput
+                                                value={form.values}
+                                                onChange={(val) => setForm({ ...form, values: val })}
+                                                placeholder="e.g., innovation, trust, simplicity"
+                                            />
+                                        </Box>
+
+                                        <Box>
+                                            <Text fontWeight="500" color="gray.300" fontSize="sm" mb={2}>Must-Use Keywords</Text>
+                                            <TagInput
+                                                value={form.keywords}
+                                                onChange={(val) => setForm({ ...form, keywords: val })}
+                                                placeholder="e.g., AI-powered, seamless, innovative"
+                                            />
+                                        </Box>
+
+                                        <Box>
+                                            <Text fontWeight="500" color="gray.300" fontSize="sm" mb={2}>Words to Avoid</Text>
+                                            <TagInput
+                                                value={form.avoidWords}
+                                                onChange={(val) => setForm({ ...form, avoidWords: val })}
+                                                placeholder="e.g., cheap, basic, easy"
+                                            />
+                                        </Box>
+                                    </VStack>
+                                </MotionBox>
+                            )}
+
+                            {currentStep === 4 && (
+                                <MotionBox
+                                    key="step4"
+                                    initial={{ opacity: 0, x: 20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: -20 }}
+                                >
+                                    <VStack spacing={6} align="stretch">
+                                        <Box>
+                                            <Text fontWeight="500" color="gray.300" fontSize="sm" mb={2}>Target Audience</Text>
+                                            <Textarea
+                                                value={form.targetAudience}
+                                                onChange={(e) => setForm({ ...form, targetAudience: e.target.value })}
+                                                placeholder="Describe your ideal audience. e.g., 'Tech-savvy marketers aged 25-45 at growth-stage startups...'"
+                                                minH="120px"
+                                                bg="surface.bg"
+                                                border="1px solid"
+                                                borderColor="surface.border"
+                                                _hover={{ borderColor: 'surface.borderHover' }}
+                                                _focus={{ borderColor: 'brand.500', boxShadow: '0 0 0 1px #6366f1' }}
+                                            />
+                                        </Box>
+
+                                        {/* Summary Preview */}
+                                        <Box
+                                            bg="rgba(99, 102, 241, 0.1)"
+                                            border="1px solid"
+                                            borderColor="brand.500"
+                                            borderRadius="lg"
+                                            p={4}
+                                        >
+                                            <HStack mb={3}>
+                                                <Icon as={FiCheckCircle} color="brand.400" />
+                                                <Text fontWeight="600" color="white">Ready to Save</Text>
+                                            </HStack>
+                                            <SimpleGrid columns={2} spacing={3} fontSize="sm">
+                                                <Box>
+                                                    <Text color="gray.500">Brand</Text>
+                                                    <Text color="white">{form.name || 'Not set'}</Text>
+                                                </Box>
+                                                <Box>
+                                                    <Text color="gray.500">Tone</Text>
+                                                    <Badge colorScheme="purple">{form.tone}</Badge>
+                                                </Box>
+                                                <Box>
+                                                    <Text color="gray.500">Values</Text>
+                                                    <Text color="white" noOfLines={1}>{form.values || 'None'}</Text>
+                                                </Box>
+                                                <Box>
+                                                    <Text color="gray.500">Keywords</Text>
+                                                    <Text color="white" noOfLines={1}>{form.keywords || 'None'}</Text>
+                                                </Box>
+                                            </SimpleGrid>
+                                        </Box>
+                                    </VStack>
+                                </MotionBox>
+                            )}
+                        </AnimatePresence>
+
+                        {/* Navigation */}
+                        <HStack justify="space-between" mt={8}>
+                            <Button
+                                variant="ghost"
+                                leftIcon={<FiChevronLeft />}
+                                onClick={prevStep}
+                                isDisabled={currentStep === 1}
+                                color="gray.400"
+                                _hover={{ bg: 'whiteAlpha.100', color: 'white' }}
+                            >
+                                Previous
+                            </Button>
+
+                            {currentStep < 4 ? (
+                                <Button
+                                    rightIcon={<FiChevronRight />}
+                                    onClick={nextStep}
+                                    isDisabled={!isStepValid()}
+                                    bg="brand.500"
+                                    color="white"
+                                    _hover={{ bg: 'brand.600' }}
+                                >
+                                    Next
+                                </Button>
+                            ) : (
+                                <Button
+                                    leftIcon={<FiSave />}
+                                    onClick={handleSubmit}
+                                    isLoading={saving}
+                                    loadingText="Saving..."
+                                    bg="success.500"
+                                    color="white"
+                                    _hover={{ bg: 'success.600' }}
+                                >
+                                    Save Brand DNA
+                                </Button>
+                            )}
+                        </HStack>
+                    </MotionBox>
+                </Box>
 
                 {/* Sidebar */}
-                <div>
-                    {/* Preview Card */}
-                    <div className="card mb-4">
-                        <div className="card-header">
-                            <h3 className="card-title">Brand Preview</h3>
-                        </div>
-                        <div>
-                            <div className="mb-2">
-                                <span className="text-muted" style={{ fontSize: '0.75rem' }}>BRAND</span>
-                                <p style={{ fontWeight: 600 }}>{form.name || 'Not set'}</p>
-                            </div>
-                            <div className="mb-2">
-                                <span className="text-muted" style={{ fontSize: '0.75rem' }}>TONE</span>
-                                <p><span className="badge badge-info">{form.tone}</span></p>
-                            </div>
-                            <div className="mb-2">
-                                <span className="text-muted" style={{ fontSize: '0.75rem' }}>VALUES</span>
-                                <p style={{ fontSize: '0.875rem' }}>
-                                    {form.values || 'None defined'}
-                                </p>
-                            </div>
-                            <div>
-                                <span className="text-muted" style={{ fontSize: '0.75rem' }}>AUDIENCE</span>
-                                <p style={{ fontSize: '0.875rem' }}>
-                                    {form.targetAudience || 'Not specified'}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
+                <VStack spacing={6} align="stretch">
+                    {/* Live Preview */}
+                    <MotionBox
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                        bg="surface.card"
+                        borderRadius="xl"
+                        border="1px solid"
+                        borderColor="surface.border"
+                        overflow="hidden"
+                    >
+                        <Box p={4} borderBottom="1px solid" borderColor="surface.border" bg="surface.bg">
+                            <Heading size="sm" color="white">Live Preview</Heading>
+                        </Box>
+                        <VStack p={4} spacing={4} align="stretch">
+                            <Box>
+                                <Text fontSize="xs" color="gray.500" mb={1}>BRAND</Text>
+                                <HStack>
+                                    <Box w={4} h={4} borderRadius="sm" bg={brandColor} />
+                                    <Text fontWeight="600" color="white">{form.name || 'Not set'}</Text>
+                                </HStack>
+                            </Box>
+                            <Box>
+                                <Text fontSize="xs" color="gray.500" mb={1}>TONE</Text>
+                                <Badge colorScheme="purple">{form.tone}</Badge>
+                            </Box>
+                            <Box>
+                                <Text fontSize="xs" color="gray.500" mb={1}>VALUES</Text>
+                                <Text fontSize="sm" color="gray.300">{form.values || 'None defined'}</Text>
+                            </Box>
+                            <Box>
+                                <Text fontSize="xs" color="gray.500" mb={1}>AUDIENCE</Text>
+                                <Text fontSize="sm" color="gray.300" noOfLines={2}>{form.targetAudience || 'Not specified'}</Text>
+                            </Box>
+                        </VStack>
+                    </MotionBox>
 
                     {/* Info Card */}
-                    <div className="card">
-                        <h4 className="mb-2">Why Brand DNA?</h4>
-                        <p className="text-muted" style={{ fontSize: '0.875rem', lineHeight: 1.6 }}>
+                    <MotionBox
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                        bg="surface.card"
+                        borderRadius="xl"
+                        border="1px solid"
+                        borderColor="surface.border"
+                        p={4}
+                    >
+                        <HStack mb={3}>
+                            <Icon as={FiZap} color="brand.400" />
+                            <Text fontWeight="600" color="white">Why Brand DNA?</Text>
+                        </HStack>
+                        <Text fontSize="sm" color="gray.400" lineHeight="1.6" mb={4}>
                             Brand DNA ensures consistency across all generated content.
-                            The Reviewer Agent scores every variant against your guidelines
-                            (threshold: 80%) to maintain your voice across platforms.
-                        </p>
-                        <div className="mt-4">
-                            <div className="flex items-center gap-2 mb-2">
-                                <span className="badge badge-success">✓</span>
-                                <span style={{ fontSize: '0.875rem' }}>Consistent tone</span>
-                            </div>
-                            <div className="flex items-center gap-2 mb-2">
-                                <span className="badge badge-success">✓</span>
-                                <span style={{ fontSize: '0.875rem' }}>Brand keywords</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="badge badge-success">✓</span>
-                                <span style={{ fontSize: '0.875rem' }}>Audience alignment</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+                            The Reviewer Agent scores every variant against your guidelines.
+                        </Text>
+                        <VStack spacing={2} align="start">
+                            {['Consistent tone', 'Brand keywords', 'Audience alignment'].map((item, idx) => (
+                                <HStack key={idx} spacing={2}>
+                                    <Icon as={FiCheck} color="success.400" boxSize={4} />
+                                    <Text fontSize="sm" color="gray.300">{item}</Text>
+                                </HStack>
+                            ))}
+                        </VStack>
+                    </MotionBox>
+                </VStack>
+            </SimpleGrid>
+        </VStack>
     );
 }
 

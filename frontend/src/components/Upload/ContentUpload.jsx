@@ -1,33 +1,161 @@
 /**
- * Content Upload Component
- * Upload new content and trigger orchestration with inline streaming logs
+ * Content Upload Component - Redesigned
+ * Modern drag-drop upload with animated orchestration pipeline
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+    Box,
+    Flex,
+    VStack,
+    HStack,
+    Heading,
+    Text,
+    Input,
+    Textarea,
+    Button,
+    Badge,
+    SimpleGrid,
+    Progress,
+    Icon,
+    Tooltip,
+    useBreakpointValue,
+} from '@chakra-ui/react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useDropzone } from 'react-dropzone';
+import Confetti from 'react-confetti';
+import {
+    FiUploadCloud,
+    FiFile,
+    FiCheck,
+    FiX,
+    FiZap,
+    FiLayers,
+    FiCpu,
+    FiCheckCircle,
+    FiAlertCircle,
+    FiArrowRight,
+    FiTwitter,
+    FiLinkedin,
+    FiMail,
+    FiInstagram,
+    FiFileText,
+} from 'react-icons/fi';
 import api from '../../services/api';
+import { showToast } from '../common';
 
+const MotionBox = motion(Box);
+const MotionFlex = motion(Flex);
+
+// Platform configuration with icons
 const PLATFORMS = [
-    { id: 'twitter', name: 'Twitter/X', icon: '🐦', desc: '280 char tweets' },
-    { id: 'linkedin', name: 'LinkedIn', icon: '💼', desc: 'Professional posts' },
-    { id: 'email', name: 'Email', icon: '📧', desc: 'Newsletter format' },
-    { id: 'instagram', name: 'Instagram', icon: '📷', desc: 'Caption style' },
-    { id: 'blog', name: 'Blog', icon: '📝', desc: 'Full article' }
+    { id: 'twitter', name: 'Twitter/X', icon: FiTwitter, color: '#1DA1F2', desc: '280 char tweets' },
+    { id: 'linkedin', name: 'LinkedIn', icon: FiLinkedin, color: '#0A66C2', desc: 'Professional posts' },
+    { id: 'email', name: 'Email', icon: FiMail, color: '#EA4335', desc: 'Newsletter format' },
+    { id: 'instagram', name: 'Instagram', icon: FiInstagram, color: '#E4405F', desc: 'Caption style' },
+    { id: 'blog', name: 'Blog', icon: FiFileText, color: '#10B981', desc: 'Full article' },
 ];
 
-const AGENT_ICONS = {
-    manager: '🎯',
-    start: '⚡',
-    memory: '🧠',
-    plan: '📋',
-    ingest: '📥',
-    generate: '✨',
-    review: '🔍',
-    verify: '✅',
-    publish: '🚀',
-    complete: '🎉',
-    error: '❌'
+// Pipeline steps for visualization
+const PIPELINE_STEPS = [
+    { id: 'init', label: 'Initialize', icon: FiZap },
+    { id: 'analyze', label: 'Analyze', icon: FiCpu },
+    { id: 'generate', label: 'Generate', icon: FiLayers },
+    { id: 'review', label: 'Review', icon: FiCheck },
+    { id: 'complete', label: 'Complete', icon: FiCheckCircle },
+];
+
+// Platform Card Component
+const PlatformCard = ({ platform, selected, onToggle, disabled }) => (
+    <MotionBox
+        as="button"
+        type="button"
+        onClick={() => !disabled && onToggle(platform.id)}
+        disabled={disabled}
+        bg={selected ? 'rgba(99, 102, 241, 0.15)' : 'surface.card'}
+        border="2px solid"
+        borderColor={selected ? 'brand.500' : 'surface.border'}
+        borderRadius="xl"
+        p={4}
+        cursor={disabled ? 'not-allowed' : 'pointer'}
+        opacity={disabled ? 0.6 : 1}
+        whileHover={!disabled ? { scale: 1.02, borderColor: 'brand.400' } : {}}
+        whileTap={!disabled ? { scale: 0.98 } : {}}
+        transition={{ duration: 0.2 }}
+        textAlign="left"
+        w="full"
+    >
+        <HStack spacing={3}>
+            <Box
+                bg={selected ? platform.color : 'gray.700'}
+                borderRadius="lg"
+                p={2}
+                transition="all 0.2s"
+            >
+                <Icon as={platform.icon} color="white" boxSize={5} />
+            </Box>
+            <VStack align="start" spacing={0} flex={1}>
+                <Text fontWeight="600" fontSize="sm" color="white">{platform.name}</Text>
+                <Text fontSize="xs" color="gray.500">{platform.desc}</Text>
+            </VStack>
+            {selected && (
+                <Icon as={FiCheck} color="brand.400" boxSize={5} />
+            )}
+        </HStack>
+    </MotionBox>
+);
+
+// Pipeline Step Component
+const PipelineStep = ({ step, status, isLast }) => {
+    const getColor = () => {
+        if (status === 'completed') return 'success.500';
+        if (status === 'active') return 'brand.500';
+        if (status === 'error') return 'error.500';
+        return 'gray.600';
+    };
+
+    return (
+        <HStack spacing={3} flex={1}>
+            <MotionBox
+                bg={status === 'completed' || status === 'active' ? getColor() : 'transparent'}
+                border="2px solid"
+                borderColor={getColor()}
+                borderRadius="full"
+                p={2}
+                animate={status === 'active' ? { scale: [1, 1.1, 1] } : {}}
+                transition={{ repeat: Infinity, duration: 1.5 }}
+            >
+                <Icon as={step.icon} color={status === 'completed' || status === 'active' ? 'white' : getColor()} boxSize={4} />
+            </MotionBox>
+            {!isLast && (
+                <Box
+                    flex={1}
+                    h="2px"
+                    bg={status === 'completed' ? 'success.500' : 'gray.700'}
+                    borderRadius="full"
+                />
+            )}
+        </HStack>
+    );
 };
+
+// Log Message Component
+const LogMessage = ({ message, index }) => (
+    <MotionBox
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: index * 0.1 }}
+        py={2}
+        borderBottom="1px solid"
+        borderColor="surface.border"
+        _last={{ border: 'none' }}
+    >
+        <Text fontSize="sm" color="gray.300" lineHeight="1.6">
+            {message}
+        </Text>
+    </MotionBox>
+);
 
 function ContentUpload() {
     const [title, setTitle] = useState('');
@@ -37,124 +165,130 @@ function ContentUpload() {
     const [error, setError] = useState('');
     const [orchestrating, setOrchestrating] = useState(false);
     const [contentId, setContentId] = useState(null);
-
-    // Streaming logs state
     const [logs, setLogs] = useState([]);
     const [status, setStatus] = useState(null);
     const [kpis, setKpis] = useState(null);
     const [variants, setVariants] = useState([]);
+    const [currentStep, setCurrentStep] = useState(0);
+    const [showConfetti, setShowConfetti] = useState(false);
 
     const logsEndRef = useRef(null);
     const navigate = useNavigate();
+    const isMobile = useBreakpointValue({ base: true, md: false });
+
+    // Dropzone configuration
+    const onDrop = useCallback((acceptedFiles) => {
+        if (acceptedFiles.length > 0) {
+            const file = acceptedFiles[0];
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                setContent(e.target.result);
+                if (!title) {
+                    setTitle(file.name.replace(/\.[^/.]+$/, ''));
+                }
+                showToast.success(`File "${file.name}" loaded successfully`);
+            };
+            reader.readAsText(file);
+        }
+    }, [title]);
+
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({
+        onDrop,
+        accept: {
+            'text/plain': ['.txt'],
+            'text/markdown': ['.md'],
+            'application/json': ['.json'],
+        },
+        maxFiles: 1,
+        disabled: orchestrating,
+    });
 
     // Auto-scroll logs
     useEffect(() => {
         logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [logs]);
 
-    // SSE for real-time log streaming (direct, no polling)
+    // SSE for real-time log streaming
     useEffect(() => {
         if (!orchestrating || !contentId) return;
 
-        console.log('[Frontend SSE] Connecting to stream for contentId:', contentId);
         const token = localStorage.getItem('saco_token');
         const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-        const baseUrl = API_BASE_URL.replace('/api', ''); // Remove /api suffix if present
-        
+        const baseUrl = API_BASE_URL.replace('/api', '');
+
         const eventSource = new EventSource(
             `${baseUrl}/api/content/${contentId}/stream?token=${token}`
         );
 
-        eventSource.onopen = () => {
-            console.log('[Frontend SSE] Connection opened successfully');
-        };
-
-        // Smart log aggregator - converts technical logs into conversational updates
         const getPhaseFromMessage = (message) => {
             if (message.includes('Starting orchestration') || message.includes('workspace memory')) {
-                return { phase: 'init', text: 'Analyzing your content and gathering context from workspace memory...' };
+                setCurrentStep(1);
+                return { text: 'Analyzing your content and gathering context...' };
             }
             if (message.includes('Execution plan ready')) {
-                return { phase: 'plan', text: 'Created execution plan - ready to transform content for multiple platforms.' };
+                setCurrentStep(2);
+                return { text: 'Created execution plan - ready to transform content.' };
             }
             if (message.includes('Content analysis complete')) {
-                return { phase: 'ingest', text: 'Content analysis complete. Extracted key themes, sentiment, and target audience.' };
+                return { text: 'Content analysis complete. Extracted key themes.' };
             }
             if (message.includes('Generating') && message.includes('variant')) {
+                setCurrentStep(3);
                 const platform = message.match(/(TWITTER|LINKEDIN|EMAIL|INSTAGRAM)/i)?.[0];
-                return { phase: 'generate', text: `Generating ${platform ? platform.toLowerCase() : 'platform'} variant with brand voice...` };
+                return { text: `Generating ${platform ? platform.toLowerCase() : 'platform'} variant...` };
             }
             if (message.includes('Review PASSED')) {
-                return { phase: 'review', text: 'Content passes brand consistency checks. Quality verified.' };
-            }
-            if (message.includes('Preparing to publish')) {
-                const count = message.match(/\d+/)?.[0] || '3';
-                return { phase: 'publish', text: `Publishing ${count} approved variants to platforms...` };
+                setCurrentStep(4);
+                return { text: 'Content passes brand consistency checks.' };
             }
             if (message.includes('published successfully')) {
                 const platform = message.match(/(TWITTER|LINKEDIN|EMAIL)/i)?.[0];
-                return { phase: 'published', text: `✓ ${platform} variant published successfully` };
+                return { text: `✓ ${platform} variant ready` };
             }
             return null;
         };
 
-        let lastPhase = '';
+        let lastMessage = '';
 
         eventSource.onmessage = (event) => {
-            console.log('[Frontend SSE] Received message:', event.data);
             try {
                 const data = JSON.parse(event.data);
-                console.log('[Frontend SSE] Parsed data:', data);
 
-                if (data.type === 'connected') {
-                    console.log('[Frontend SSE] Connected event received');
-                } else if (data.type === 'log') {
-                    console.log('[Frontend SSE] Log event:', data.message);
-                    
-                    // Convert technical log to conversational update
+                if (data.type === 'log') {
                     const phaseInfo = getPhaseFromMessage(data.message);
-                    
-                    if (phaseInfo && phaseInfo.phase !== lastPhase) {
-                        lastPhase = phaseInfo.phase;
-                        setLogs(prev => [...prev, {
-                            message: phaseInfo.text,
-                            timestamp: data.timestamp
-                        }]);
+                    if (phaseInfo && phaseInfo.text !== lastMessage) {
+                        lastMessage = phaseInfo.text;
+                        setLogs(prev => [...prev, { message: phaseInfo.text }]);
                     }
                 } else if (data.type === 'complete') {
-                    console.log('[Frontend SSE] Complete event received');
-                    setLogs(prev => [...prev, {
-                        message: '🎉 All done! Content successfully transformed for all platforms.',
-                        timestamp: new Date().toISOString()
-                    }]);
+                    setCurrentStep(5);
+                    setLogs(prev => [...prev, { message: '🎉 All done! Content transformed successfully.' }]);
                     setStatus('completed');
                     setOrchestrating(false);
                     setKpis(data.kpis);
                     setVariants(data.variants || []);
+                    setShowConfetti(true);
+                    showToast.celebrate('Content orchestration complete! 🎉');
+                    // Auto-hide confetti after 5 seconds
+                    setTimeout(() => setShowConfetti(false), 5000);
                     eventSource.close();
                 } else if (data.type === 'error') {
-                    console.log('[Frontend SSE] Error event received:', data.error);
                     setStatus('failed');
                     setOrchestrating(false);
                     setError(data.error);
+                    showToast.error(data.error);
                     eventSource.close();
                 }
             } catch (err) {
-                console.error('[Frontend SSE] Parse error:', err, 'Raw data:', event.data);
+                console.error('[SSE] Parse error:', err);
             }
         };
 
-        eventSource.onerror = (err) => {
-            console.error('[Frontend SSE] Connection error:', err);
-            console.error('[Frontend SSE] ReadyState:', eventSource.readyState);
-            // Fall back to polling on SSE failure
+        eventSource.onerror = () => {
             eventSource.close();
         };
 
-        return () => {
-            console.log('[Frontend SSE] Cleaning up connection');
-            eventSource.close();
-        };
+        return () => eventSource.close();
     }, [orchestrating, contentId]);
 
     const togglePlatform = (platformId) => {
@@ -170,21 +304,22 @@ function ContentUpload() {
 
         if (selectedPlatforms.length === 0) {
             setError('Select at least one target platform');
+            showToast.warning('Please select at least one platform');
             return;
         }
 
         if (content.length < 50) {
             setError('Content must be at least 50 characters');
+            showToast.warning('Content is too short (min 50 characters)');
             return;
         }
 
-        console.log('[ContentUpload] Starting submission process');
         setLoading(true);
         setError('');
-        setLogs([{ message: 'Initializing orchestration pipeline...', timestamp: new Date().toISOString() }]);
+        setCurrentStep(0);
+        setLogs([{ message: 'Initializing orchestration pipeline...' }]);
 
         try {
-            // Step 1: Create content
             const createRes = await api.post('/content', {
                 title,
                 data: content,
@@ -194,278 +329,336 @@ function ContentUpload() {
             const newContentId = createRes.data.content.id;
             setContentId(newContentId);
 
-            // Step 2: Start orchestration
             await api.post(`/content/${newContentId}/orchestrate`, {
                 platforms: selectedPlatforms
             });
 
-            // Step 3: Start polling for logs (stay on same page)
             setLoading(false);
             setOrchestrating(true);
             setStatus('processing');
+            setCurrentStep(1);
 
         } catch (err) {
             setError(err.response?.data?.error || 'Upload failed');
+            showToast.error(err.response?.data?.error || 'Upload failed');
             setLoading(false);
         }
     };
 
-    const handleViewResults = () => {
-        navigate(`/content/${contentId}`);
+    const getPipelineStepStatus = (stepIndex) => {
+        if (status === 'failed') return stepIndex === currentStep ? 'error' : stepIndex < currentStep ? 'completed' : 'pending';
+        if (stepIndex < currentStep) return 'completed';
+        if (stepIndex === currentStep && (orchestrating || status === 'completed')) return 'active';
+        if (status === 'completed' && stepIndex <= 4) return 'completed';
+        return 'pending';
     };
 
     return (
-        <div className="animate-fade-in">
-            <div className="mb-4">
-                <h1>Upload Content</h1>
-                <p className="mt-1">Transform your content for multiple platforms with AI</p>
-            </div>
+        <>
+            {/* Confetti celebration effect */}
+            {showConfetti && (
+                <Confetti
+                    width={window.innerWidth}
+                    height={window.innerHeight}
+                    recycle={false}
+                    numberOfPieces={500}
+                    gravity={0.3}
+                    colors={['#6366f1', '#8b5cf6', '#a855f7', '#22c55e', '#14b8a6']}
+                />
+            )}
+            <VStack spacing={6} align="stretch">
+                {/* Header */}
+                <MotionBox
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                >
+                    <Heading size="lg" color="white">Upload Content</Heading>
+                    <Text color="gray.400" mt={1}>Transform your content for multiple platforms with AI</Text>
+                </MotionBox>
 
-            {/* Two Column Layout */}
-            <div className="page-grid">
-
-                {/* Left Column - Form & Output */}
-                <div>
-                    <div className="card">
-                        <form onSubmit={handleSubmit}>
-                            {/* Title */}
-                            <div className="form-group">
-                                <label className="form-label">Content Title</label>
-                                <input
-                                    type="text"
-                                    className="form-input"
-                                    value={title}
-                                    onChange={(e) => setTitle(e.target.value)}
-                                    placeholder="e.g., Product Launch Announcement"
-                                    required
-                                    maxLength={200}
-                                    disabled={orchestrating}
+                {/* Progress Pipeline */}
+                {(orchestrating || status === 'completed' || status === 'failed') && (
+                    <MotionBox
+                        initial={{ opacity: 0, scaleY: 0 }}
+                        animate={{ opacity: 1, scaleY: 1 }}
+                        bg="surface.card"
+                        borderRadius="xl"
+                        border="1px solid"
+                        borderColor="surface.border"
+                        p={6}
+                    >
+                        <HStack spacing={0} justify="space-between">
+                            {PIPELINE_STEPS.map((step, idx) => (
+                                <PipelineStep
+                                    key={step.id}
+                                    step={step}
+                                    status={getPipelineStepStatus(idx)}
+                                    isLast={idx === PIPELINE_STEPS.length - 1}
                                 />
-                            </div>
+                            ))}
+                        </HStack>
+                        <HStack justify="space-between" mt={3}>
+                            {PIPELINE_STEPS.map((step) => (
+                                <Text key={step.id} fontSize="xs" color="gray.500" flex={1} textAlign="center">
+                                    {step.label}
+                                </Text>
+                            ))}
+                        </HStack>
+                    </MotionBox>
+                )}
 
-                            {/* Content */}
-                            <div className="form-group">
-                                <label className="form-label">
-                                    Original Content
-                                    <span className="text-muted" style={{ fontWeight: 'normal', marginLeft: '0.5rem' }}>
-                                        ({content.length} characters)
-                                    </span>
-                                </label>
-                                <textarea
-                                    className="form-textarea"
-                                    value={content}
-                                    onChange={(e) => setContent(e.target.value)}
-                                    placeholder="Paste your article, blog post, or any text content here..."
-                                    required
-                                    style={{ minHeight: '150px' }}
-                                    disabled={orchestrating}
-                                />
-                            </div>
-
-                            {/* Platform Selection */}
-                            <div className="form-group">
-                                <label className="form-label">Target Platforms</label>
-                                <div className="platform-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.5rem' }}>
-                                    {PLATFORMS.map(platform => (
-                                        <button
-                                            key={platform.id}
-                                            type="button"
-                                            onClick={() => !orchestrating && togglePlatform(platform.id)}
-                                            className={`card ${selectedPlatforms.includes(platform.id) ? 'selected' : ''}`}
-                                            disabled={orchestrating}
-                                            style={{
-                                                padding: '0.75rem',
-                                                cursor: orchestrating ? 'not-allowed' : 'pointer',
-                                                textAlign: 'left',
-                                                border: selectedPlatforms.includes(platform.id)
-                                                    ? '2px solid var(--color-accent-primary)'
-                                                    : '1px solid rgba(255,255,255,0.1)',
-                                                background: selectedPlatforms.includes(platform.id)
-                                                    ? 'rgba(99, 102, 241, 0.1)'
-                                                    : 'var(--color-bg-card)',
-                                                opacity: orchestrating ? 0.7 : 1
-                                            }}
-                                        >
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                <span style={{ fontSize: '1.25rem' }}>{platform.icon}</span>
-                                                <span style={{ fontWeight: 600, fontSize: '0.8rem' }}>{platform.name}</span>
-                                            </div>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Error */}
-                            {error && (
-                                <div className="form-error" style={{ marginBottom: '1rem' }}>
-                                    {error}
-                                </div>
-                            )}
-
-                            {/* Submit */}
-                            <button
-                                type="submit"
-                                className="btn btn-primary btn-lg w-full"
-                                disabled={loading || orchestrating}
+                <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={6}>
+                    {/* Left - Form */}
+                    <VStack spacing={6} align="stretch">
+                        {/* Drag & Drop Zone */}
+                        <MotionBox
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.1 }}
+                        >
+                            <Box
+                                {...getRootProps()}
+                                bg={isDragActive ? 'rgba(99, 102, 241, 0.1)' : 'surface.card'}
+                                border="2px dashed"
+                                borderColor={isDragActive ? 'brand.500' : 'surface.border'}
+                                borderRadius="xl"
+                                p={8}
+                                textAlign="center"
+                                cursor={orchestrating ? 'not-allowed' : 'pointer'}
+                                transition="all 0.2s"
+                                _hover={!orchestrating ? { borderColor: 'brand.400', bg: 'rgba(99, 102, 241, 0.05)' } : {}}
                             >
-                                {loading ? (
-                                    <>
-                                        <span className="spinner spinner-sm"></span>
-                                        Creating content...
-                                    </>
-                                ) : orchestrating ? (
-                                    <>
-                                        <span className="spinner spinner-sm"></span>
-                                        Orchestrating...
-                                    </>
-                                ) : (
-                                    <>
+                                <input {...getInputProps()} />
+                                <Icon as={FiUploadCloud} boxSize={12} color={isDragActive ? 'brand.400' : 'gray.500'} mb={4} />
+                                <Text fontWeight="600" color="white" mb={1}>
+                                    {isDragActive ? 'Drop your file here' : 'Drag & drop a file here'}
+                                </Text>
+                                <Text fontSize="sm" color="gray.500">
+                                    or click to browse • .txt, .md, .json supported
+                                </Text>
+                            </Box>
+                        </MotionBox>
+
+                        {/* Form Card */}
+                        <MotionBox
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 }}
+                            bg="surface.card"
+                            borderRadius="xl"
+                            border="1px solid"
+                            borderColor="surface.border"
+                            p={6}
+                        >
+                            <form onSubmit={handleSubmit}>
+                                <VStack spacing={5} align="stretch">
+                                    {/* Title */}
+                                    <Box>
+                                        <Text fontWeight="500" color="gray.300" fontSize="sm" mb={2}>Content Title</Text>
+                                        <Input
+                                            value={title}
+                                            onChange={(e) => setTitle(e.target.value)}
+                                            placeholder="e.g., Product Launch Announcement"
+                                            required
+                                            maxLength={200}
+                                            disabled={orchestrating}
+                                            bg="surface.bg"
+                                            border="1px solid"
+                                            borderColor="surface.border"
+                                            _hover={{ borderColor: 'surface.borderHover' }}
+                                            _focus={{ borderColor: 'brand.500', boxShadow: '0 0 0 1px #6366f1' }}
+                                        />
+                                    </Box>
+
+                                    {/* Content */}
+                                    <Box>
+                                        <HStack justify="space-between" mb={2}>
+                                            <Text fontWeight="500" color="gray.300" fontSize="sm">Original Content</Text>
+                                            <Text fontSize="xs" color="gray.500">{content.length} characters</Text>
+                                        </HStack>
+                                        <Textarea
+                                            value={content}
+                                            onChange={(e) => setContent(e.target.value)}
+                                            placeholder="Paste your article, blog post, or any text content here..."
+                                            required
+                                            minH="150px"
+                                            disabled={orchestrating}
+                                            bg="surface.bg"
+                                            border="1px solid"
+                                            borderColor="surface.border"
+                                            _hover={{ borderColor: 'surface.borderHover' }}
+                                            _focus={{ borderColor: 'brand.500', boxShadow: '0 0 0 1px #6366f1' }}
+                                        />
+                                    </Box>
+
+                                    {/* Platforms */}
+                                    <Box>
+                                        <Text fontWeight="500" color="gray.300" fontSize="sm" mb={3}>Target Platforms</Text>
+                                        <SimpleGrid columns={{ base: 2, sm: 3 }} spacing={3}>
+                                            {PLATFORMS.map(platform => (
+                                                <PlatformCard
+                                                    key={platform.id}
+                                                    platform={platform}
+                                                    selected={selectedPlatforms.includes(platform.id)}
+                                                    onToggle={togglePlatform}
+                                                    disabled={orchestrating}
+                                                />
+                                            ))}
+                                        </SimpleGrid>
+                                    </Box>
+
+                                    {/* Error */}
+                                    {error && (
+                                        <HStack bg="rgba(239, 68, 68, 0.1)" p={3} borderRadius="lg" border="1px solid" borderColor="error.500">
+                                            <Icon as={FiAlertCircle} color="error.400" />
+                                            <Text color="error.400" fontSize="sm">{error}</Text>
+                                        </HStack>
+                                    )}
+
+                                    {/* Submit */}
+                                    <Button
+                                        type="submit"
+                                        size="lg"
+                                        bg="brand.500"
+                                        color="white"
+                                        isLoading={loading || orchestrating}
+                                        loadingText={loading ? 'Creating...' : 'Orchestrating...'}
+                                        rightIcon={<FiArrowRight />}
+                                        _hover={{ bg: 'brand.600', transform: 'translateY(-2px)', boxShadow: 'glow' }}
+                                        _active={{ transform: 'translateY(0)' }}
+                                    >
                                         🚀 Start Orchestration
-                                    </>
+                                    </Button>
+                                </VStack>
+                            </form>
+                        </MotionBox>
+                    </VStack>
+
+                    {/* Right - Logs & Results */}
+                    <VStack spacing={6} align="stretch">
+                        {/* Workflow Log */}
+                        <MotionBox
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.3 }}
+                            bg="surface.card"
+                            borderRadius="xl"
+                            border="1px solid"
+                            borderColor="surface.border"
+                            overflow="hidden"
+                            position="sticky"
+                            top="80px"
+                        >
+                            <HStack justify="space-between" p={4} borderBottom="1px solid" borderColor="surface.border">
+                                <Heading size="sm" color="white">Workflow Log</Heading>
+                                {orchestrating && status !== 'completed' && (
+                                    <Badge colorScheme="purple" variant="subtle">
+                                        Processing...
+                                    </Badge>
                                 )}
-                            </button>
-                        </form>
-                    </div>
-
-                    {/* Generated Variants - Show after completion */}
-                    {status === 'completed' && variants.length > 0 && (
-                        <div className="card mt-4 animate-fade-in">
-                            <div className="card-header">
-                                <h3 className="card-title">Generated Variants</h3>
-                                <button className="btn btn-sm btn-primary" onClick={handleViewResults}>
-                                    View Full Details →
-                                </button>
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                {variants.slice(0, 2).map((variant, idx) => (
-                                    <div key={idx} style={{
-                                        padding: '1rem',
-                                        background: 'var(--color-bg-tertiary)',
-                                        borderRadius: 'var(--radius-md)'
-                                    }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                            <span>{PLATFORMS.find(p => p.id === variant.platform)?.icon}</span>
-                                            <strong style={{ textTransform: 'capitalize' }}>{variant.platform}</strong>
-                                            <span className="badge badge-success" style={{ marginLeft: 'auto' }}>
-                                                {variant.consistencyScore}%
-                                            </span>
-                                        </div>
-                                        <p style={{ fontSize: '0.85rem', opacity: 0.9 }}>
-                                            {variant.content?.substring(0, 150)}...
-                                        </p>
-                                    </div>
-                                ))}
-                                {variants.length > 2 && (
-                                    <p className="text-muted text-center">
-                                        +{variants.length - 2} more variants
-                                    </p>
+                                {status === 'completed' && (
+                                    <Badge colorScheme="green">Complete</Badge>
                                 )}
-                            </div>
-                        </div>
-                    )}
-                </div>
+                            </HStack>
 
-                {/* Right Column - Workflow Log */}
-                <div>
-                    <div className="card workflow-sidebar" style={{ position: 'sticky', top: '80px' }}>
-                        <div className="card-header" style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between'
-                        }}>
-                            <h3 className="card-title" style={{ margin: 0 }}>Workflow Log</h3>
-                            {orchestrating && status !== 'completed' && (
-                                <span className="spinner spinner-sm"></span>
-                            )}
-                            {status === 'completed' && (
-                                <span className="badge badge-success">Complete</span>
-                            )}
-                        </div>
+                            <Box maxH="300px" overflowY="auto" p={4}>
+                                {logs.length === 0 ? (
+                                    <Text color="gray.500" textAlign="center" py={8}>
+                                        Logs will appear here when you start orchestration
+                                    </Text>
+                                ) : (
+                                    <VStack align="stretch" spacing={0}>
+                                        {logs.map((log, idx) => (
+                                            <LogMessage key={idx} message={log.message} index={idx} />
+                                        ))}
+                                        <div ref={logsEndRef} />
+                                    </VStack>
+                                )}
+                            </Box>
 
-                        <div style={{
-                            maxHeight: '500px',
-                            overflowY: 'auto',
-                            padding: '0.5rem 0'
-                        }}>
-                            {logs.length === 0 ? (
-                                <p className="text-muted text-center" style={{ padding: '2rem' }}>
-                                    {orchestrating ? 'Starting orchestration...' : 'Logs will appear here when you start orchestration'}
-                                </p>
-                            ) : (
-                                <div className="workflow-steps">
-                                    {logs.map((log, idx) => (
-                                        <div
-                                            key={idx}
-                                            className="workflow-step"
-                                            style={{
-                                                opacity: 0,
-                                                animation: 'workflowFadeIn 0.4s ease forwards',
-                                                animationDelay: `${idx * 0.1}s`,
-                                                marginBottom: '0.75rem'
-                                            }}
-                                        >
-                                            <div style={{ 
-                                                fontSize: '0.9rem', 
-                                                lineHeight: '1.6',
-                                                color: 'rgba(255,255,255,0.9)'
-                                            }}>
-                                                {log.message}
-                                            </div>
-                                        </div>
-                                    ))}
-                                    <div ref={logsEndRef} />
-                                </div>
+                            {/* KPIs */}
+                            {kpis && (
+                                <SimpleGrid columns={3} gap={4} p={4} borderTop="1px solid" borderColor="surface.border" bg="surface.bg">
+                                    <VStack spacing={0}>
+                                        <Text fontSize="xl" fontWeight="700" color="success.400">{kpis.hitRate}%</Text>
+                                        <Text fontSize="xs" color="gray.500">Hit Rate</Text>
+                                    </VStack>
+                                    <VStack spacing={0}>
+                                        <Text fontSize="xl" fontWeight="700" color="white">{kpis.publishedCount}</Text>
+                                        <Text fontSize="xs" color="gray.500">Published</Text>
+                                    </VStack>
+                                    <VStack spacing={0}>
+                                        <Text fontSize="xl" fontWeight="700" color="white">{kpis.processingTime}s</Text>
+                                        <Text fontSize="xs" color="gray.500">Time</Text>
+                                    </VStack>
+                                </SimpleGrid>
                             )}
-                        </div>
+                        </MotionBox>
 
-                        {/* KPIs Summary */}
-                        {kpis && (
-                            <div className="kpi-summary-grid" style={{
-                                borderTop: '1px solid rgba(255,255,255,0.1)',
-                                padding: '1rem',
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(3, 1fr)',
-                                gap: '0.5rem',
-                                textAlign: 'center'
-                            }}>
-                                <div>
-                                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-success)' }}>
-                                        {kpis.hitRate}%
-                                    </div>
-                                    <div className="text-muted" style={{ fontSize: '0.65rem' }}>Hit Rate</div>
-                                </div>
-                                <div>
-                                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>
-                                        {kpis.publishedCount}
-                                    </div>
-                                    <div className="text-muted" style={{ fontSize: '0.65rem' }}>Published</div>
-                                </div>
-                                <div>
-                                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>
-                                        {kpis.processingTime}s
-                                    </div>
-                                    <div className="text-muted" style={{ fontSize: '0.65rem' }}>Time</div>
-                                </div>
-                            </div>
+                        {/* Generated Variants Preview */}
+                        {status === 'completed' && variants.length > 0 && (
+                            <MotionBox
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                bg="surface.card"
+                                borderRadius="xl"
+                                border="1px solid"
+                                borderColor="surface.border"
+                                overflow="hidden"
+                            >
+                                <HStack justify="space-between" p={4} borderBottom="1px solid" borderColor="surface.border">
+                                    <Heading size="sm" color="white">Generated Variants</Heading>
+                                    <Button
+                                        size="sm"
+                                        bg="brand.500"
+                                        color="white"
+                                        rightIcon={<FiArrowRight />}
+                                        onClick={() => navigate(`/content/${contentId}`)}
+                                        _hover={{ bg: 'brand.600' }}
+                                    >
+                                        View All
+                                    </Button>
+                                </HStack>
+
+                                <VStack p={4} spacing={3} align="stretch">
+                                    {variants.slice(0, 2).map((variant, idx) => {
+                                        const platform = PLATFORMS.find(p => p.id === variant.platform);
+                                        return (
+                                            <Box
+                                                key={idx}
+                                                bg="surface.bg"
+                                                borderRadius="lg"
+                                                p={4}
+                                                border="1px solid"
+                                                borderColor="surface.border"
+                                            >
+                                                <HStack mb={2}>
+                                                    <Icon as={platform?.icon || FiFileText} color={platform?.color} />
+                                                    <Text fontWeight="600" color="white" textTransform="capitalize">
+                                                        {variant.platform}
+                                                    </Text>
+                                                    <Badge colorScheme="green" ml="auto">{variant.consistencyScore}%</Badge>
+                                                </HStack>
+                                                <Text fontSize="sm" color="gray.400" noOfLines={2}>
+                                                    {variant.content}
+                                                </Text>
+                                            </Box>
+                                        );
+                                    })}
+                                    {variants.length > 2 && (
+                                        <Text color="gray.500" fontSize="sm" textAlign="center">
+                                            +{variants.length - 2} more variants
+                                        </Text>
+                                    )}
+                                </VStack>
+                            </MotionBox>
                         )}
-                    </div>
-                </div>
-            </div>
-
-            <style>{`
-                @keyframes workflowFadeIn {
-                    from { 
-                        opacity: 0; 
-                        transform: translateX(-10px); 
-                    }
-                    to { 
-                        opacity: 1; 
-                        transform: translateX(0); 
-                    }
-                }
-            `}</style>
-        </div>
+                    </VStack>
+                </SimpleGrid>
+            </VStack>
+        </>
     );
 }
 
 export default ContentUpload;
+
