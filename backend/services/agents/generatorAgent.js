@@ -101,8 +101,33 @@ class GeneratorAgent {
         this.llm = new ChatGroq({
             apiKey: process.env.GROQ_API_KEY,
             model: 'llama-3.3-70b-versatile',
-            temperature: 0.5  // Lower temp for better JSON compliance
+            temperature: 0.5,  // Lower temp for better JSON compliance
+            maxTokens: 4096    // Prevent truncation on long-form content (email/blog)
         });
+
+        // Stricter retry prompt for when initial generation fails JSON parsing
+        this.retryPrompt = PromptTemplate.fromTemplate(`
+You are a JSON formatting assistant. Convert the following content into valid JSON.
+
+PLATFORM: {platform}
+CONTENT TO FORMAT:
+{rawContent}
+
+Output ONLY this exact JSON structure, nothing else:
+{{"content": "<the content with newlines as \\n>", "hashtags": [], "hook": "<first sentence>", "charCount": <number>}}
+
+RULES:
+- Output ONLY valid JSON, no markdown, no code blocks, no explanation
+- All newlines MUST be \\n
+- All quotes inside content MUST be escaped as \\"
+- Keep content under {maxChars} characters
+`);
+
+        this.retryChain = RunnableSequence.from([
+            this.retryPrompt,
+            this.llm,
+            new StringOutputParser()
+        ]);
 
         this.generationPrompt = PromptTemplate.fromTemplate(`
 You are the Generator Agent - a creative content transformer for SACO.
@@ -178,52 +203,41 @@ Output format:
                 brandDNA: brandText
             });
 
-            let result;
-            try {
-                // Strip markdown code blocks if present (LLM often wraps JSON in ```json ... ```)
-                let cleanResponse = response.trim();
+            let result = this._parseJsonResponse(response);
 
-                // More robust code block stripping
-                if (cleanResponse.startsWith('```')) {
-                    // Remove opening ```json or ``` and closing ```
-                    cleanResponse = cleanResponse
-                        .replace(/^```(?:json)?[\r\n]*/i, '')
-                        .replace(/[\r\n]*```$/g, '')
-                        .trim();
-                }
+            // If initial parse failed, retry with a stricter formatting prompt
+            if (!result) {
+                console.warn('[Generator] Initial JSON parse failed for', platform, '- attempting retry');
+                console.warn('[Generator] Raw response (first 300 chars):', response.substring(0, 300));
 
-                result = JSON.parse(cleanResponse);
-            } catch {
-                // If JSON parsing fails, try to extract content from a partial JSON response
-                console.warn('[Generator] Failed to parse LLM response as JSON for', platform);
-                console.warn('[Generator] Raw response:', response.substring(0, 300));
+                // Extract raw content from the broken response for the retry
+                const rawContent = this._extractRawContent(response);
 
-                // Try to extract content field from partial/malformed JSON
-                let extractedContent = '';
-                const contentMatch = response.match(/"content"\s*:\s*"([^"]+)/);
-                if (contentMatch) {
-                    extractedContent = contentMatch[1];
-                } else {
-                    // Strip any code blocks and use as raw content
-                    extractedContent = response
-                        .replace(/^```(?:json)?[\r\n]*/gi, '')
-                        .replace(/[\r\n]*```$/g, '')
-                        .replace(/^\s*\{[\s\S]*?"content"\s*:\s*"/i, '')
-                        .replace(/"[\s\S]*$/i, '')
-                        .trim();
-
-                    // If still nothing useful, use original content data
-                    if (!extractedContent || extractedContent.length < 20) {
-                        extractedContent = content.data.substring(0, specs.maxChars - 50);
+                try {
+                    const retryResponse = await this.retryChain.invoke({
+                        platform,
+                        rawContent: rawContent.substring(0, specs.maxChars),
+                        maxChars: specs.maxChars
+                    });
+                    result = this._parseJsonResponse(retryResponse);
+                    if (result) {
+                        console.log('[Generator] ✅ Retry succeeded for', platform);
                     }
+                } catch (retryErr) {
+                    console.warn('[Generator] Retry also failed for', platform, retryErr.message);
                 }
 
-                result = {
-                    content: extractedContent.substring(0, specs.maxChars),
-                    hashtags: [],
-                    hook: extractedContent.substring(0, 50),
-                    charCount: extractedContent.length
-                };
+                // Final fallback: use extracted content directly
+                if (!result) {
+                    console.warn('[Generator] Using fallback content extraction for', platform);
+                    const fallback = rawContent.substring(0, specs.maxChars);
+                    result = {
+                        content: fallback,
+                        hashtags: [],
+                        hook: fallback.substring(0, 50),
+                        charCount: fallback.length
+                    };
+                }
             }
 
             // Ensure content is within limits
@@ -291,6 +305,77 @@ Output format:
                 }
             };
         }
+    }
+
+    /**
+     * Attempt to parse a JSON response from the LLM, with cleanup for common issues.
+     * Returns the parsed object or null if parsing fails.
+     */
+    _parseJsonResponse(response) {
+        try {
+            let clean = response.trim();
+
+            // Strip markdown code blocks
+            if (clean.startsWith('```')) {
+                clean = clean
+                    .replace(/^```(?:json)?[\r\n]*/i, '')
+                    .replace(/[\r\n]*```$/g, '')
+                    .trim();
+            }
+
+            return JSON.parse(clean);
+        } catch {
+            // Try to repair truncated JSON (e.g. missing closing quote/braces)
+            try {
+                let clean = response.trim();
+                if (clean.startsWith('```')) {
+                    clean = clean
+                        .replace(/^```(?:json)?[\r\n]*/i, '')
+                        .replace(/[\r\n]*```$/g, '')
+                        .trim();
+                }
+
+                // If JSON is truncated mid-string, close it
+                if (clean.startsWith('{') && !clean.endsWith('}')) {
+                    // Find last complete key-value pair
+                    const contentMatch = clean.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)/);
+                    if (contentMatch) {
+                        const extractedContent = contentMatch[1];
+                        return {
+                            content: extractedContent,
+                            hashtags: [],
+                            hook: extractedContent.substring(0, 50),
+                            charCount: extractedContent.length
+                        };
+                    }
+                }
+            } catch {
+                // Repair also failed
+            }
+            return null;
+        }
+    }
+
+    /**
+     * Extract usable raw text content from a broken/truncated LLM response.
+     */
+    _extractRawContent(response) {
+        // Try to pull the content field value
+        const contentMatch = response.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)/);
+        if (contentMatch && contentMatch[1].length > 20) {
+            // Unescape the JSON string escapes
+            return contentMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+        }
+
+        // Strip JSON wrapper and code blocks, use raw text
+        let text = response
+            .replace(/^```(?:json)?[\r\n]*/gi, '')
+            .replace(/[\r\n]*```$/g, '')
+            .replace(/^\s*\{[\s\S]*?"content"\s*:\s*"/i, '')
+            .replace(/"[\s\S]*$/i, '')
+            .trim();
+
+        return text.length > 20 ? text : 'Content generation in progress.';
     }
 }
 
