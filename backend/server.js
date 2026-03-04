@@ -36,7 +36,7 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('✅ MongoDB connected successfully'))
   .catch(err => {
     console.error('❌ MongoDB connection error:', err.message);
-    process.exit(1);
+    console.warn('⚠️ Server running without MongoDB. Some features will not work.');
   });
 
 // Serve static files for uploaded images (with CORS headers already applied)

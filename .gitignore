@@ -33,3 +33,17 @@ coverage/
 
 # Misc
 *.log
+
+# Test-generated images
+backend/test-*.png
+backend/test-*.jpg
+
+# Uploaded files
+uploads/
+
+# Duplicate env files
+backend/env (1)
+
+# Package lock files (optional — keep diffs cleaner)
+# Uncomment the line below if you prefer not to track lock files:
+# package-lock.json

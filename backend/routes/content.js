@@ -191,10 +191,22 @@ router.post('/', async (req, res) => {
  */
 router.get('/', async (req, res) => {
     try {
-        const { page = 1, limit = 10, status } = req.query;
+        const { page = 1, limit = 50, status, search } = req.query;
 
         const query = { userId: req.userId };
         if (status) query.orchestrationStatus = status;
+
+        // Search across title, keywords, and platform names
+        if (search && search.trim()) {
+            const regex = new RegExp(search.trim(), 'i');
+            query.$or = [
+                { title: regex },
+                { 'metadata.keywords': regex },
+                { 'metadata.themes': regex },
+                { 'variants.platform': regex },
+                { 'orchestrationLog.agent': regex },
+            ];
+        }
 
         const contents = await Content.find(query)
             .sort({ createdAt: -1 })
@@ -400,6 +412,137 @@ router.get('/:id/status', async (req, res) => {
     } catch (error) {
         console.error('Status check error:', error);
         res.status(500).json({ error: 'Failed to check status' });
+    }
+});
+
+/**
+ * GET /api/content/:id/agent/:agentId
+ * Get detailed information about a specific agent's work on this content
+ */
+
+// User-friendly step title mapping per agent
+const STEP_TITLE_MAP = {
+    manager: {
+        'planning': 'Creating Execution Plan',
+        'querying': 'Querying Memory Systems',
+        'delegating': 'Delegating to Worker Agents',
+        'monitoring': 'Monitoring Progress',
+        'calculating': 'Calculating KPIs',
+        'completed': 'Workflow Complete',
+    },
+    ingest: {
+        'analyzing': 'Analyzing Content Structure',
+        'extracting': 'Extracting Themes & Keywords',
+        'sentiment': 'Determining Sentiment',
+        'embedding': 'Generating Embeddings',
+        'rag': 'Retrieving Context via RAG',
+        'completed': 'Analysis Complete',
+    },
+    generator: {
+        'receiving': 'Receiving Enriched Content',
+        'generating': 'Generating Platform Variants',
+        'twitter': 'Generating Twitter Variant',
+        'linkedin': 'Generating LinkedIn Variant',
+        'email': 'Generating Email Variant',
+        'brand': 'Applying Brand Voice',
+        'grounding': 'Ensuring Fact Grounding',
+        'completed': 'Generation Complete',
+    },
+    reviewer: {
+        'receiving': 'Receiving Variant for Review',
+        'tone': 'Scoring Tone Match',
+        'alignment': 'Scoring Value Alignment',
+        'keywords': 'Checking Keyword Usage',
+        'prohibited': 'Verifying Prohibited Words',
+        'audience': 'Scoring Audience Fit',
+        'scoring': 'Calculating Weighted Score',
+        'completed': 'Review Complete',
+    },
+    publisher: {
+        'receiving': 'Receiving Approved Variant',
+        'formatting': 'Formatting for Platform APIs',
+        'twitter': 'Formatting for Twitter API',
+        'linkedin': 'Formatting for LinkedIn API',
+        'email': 'Formatting for Email API',
+        'metadata': 'Generating Metadata',
+        'payload': 'Creating API Payloads',
+        'completed': 'Publishing Complete',
+    },
+};
+
+function getFriendlyTitle(agentId, action) {
+    const agentMap = STEP_TITLE_MAP[agentId?.toLowerCase()];
+    if (agentMap && agentMap[action?.toLowerCase()]) {
+        return agentMap[action.toLowerCase()];
+    }
+    // Fallback: capitalize the raw action
+    if (!action) return 'Processing';
+    return action.charAt(0).toUpperCase() + action.slice(1);
+}
+
+router.get('/:id/agent/:agentId', async (req, res) => {
+    try {
+        const content = await Content.findOne({
+            _id: req.params.id,
+            userId: req.userId
+        }).select('orchestrationLog pipelineTrace kpis variants');
+
+        if (!content) {
+            return res.status(404).json({ error: 'Content not found' });
+        }
+
+        const agentId = req.params.agentId;
+
+        // Filter logs and traces for this specific agent
+        const agentLogs = content.orchestrationLog?.filter(log =>
+            log.agent?.toLowerCase() === agentId.toLowerCase()
+        ) || [];
+
+        const agentTraces = content.pipelineTrace?.filter(trace =>
+            trace.agent?.toLowerCase() === agentId.toLowerCase()
+        ) || [];
+
+        // Parse agent-specific data into user-friendly format
+        const steps = agentLogs.map((log, index) => ({
+            title: getFriendlyTitle(agentId, log.action),
+            description: log.details?.message || 'Working on task',
+            status: log.action === 'completed' ? 'completed' :
+                log.action === 'error' ? 'error' : 'active',
+            duration: log.details?.duration || null,
+            details: log.details?.additionalInfo || null,
+            timestamp: log.timestamp
+        }));
+
+        // Calculate agent-specific metrics
+        const totalTasks = steps.length;
+        const tasksCompleted = steps.filter(s => s.status === 'completed').length;
+        const successRate = totalTasks > 0 ? Math.round((tasksCompleted / totalTasks) * 100) : 100;
+
+        // Calculate processing time
+        const startTime = agentLogs[0]?.timestamp ? new Date(agentLogs[0].timestamp) : null;
+        const endTime = agentLogs[agentLogs.length - 1]?.timestamp ?
+            new Date(agentLogs[agentLogs.length - 1].timestamp) : null;
+        const processingTime = startTime && endTime ?
+            Math.round((endTime - startTime) / 1000) : 0;
+
+        // Get agent output from traces
+        const output = agentTraces.length > 0 ?
+            agentTraces[agentTraces.length - 1].passedOn : null;
+
+        res.json({
+            agentId,
+            steps,
+            totalTasks,
+            tasksCompleted,
+            successRate,
+            processingTime,
+            output,
+            logs: agentLogs,
+            traces: agentTraces
+        });
+    } catch (error) {
+        console.error('Agent detail error:', error);
+        res.status(500).json({ error: 'Failed to get agent details' });
     }
 });
 

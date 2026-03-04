@@ -5,38 +5,38 @@
 
 import { extendTheme } from '@chakra-ui/react';
 
-// Brand color scale (primary: #6366f1 - Indigo)
+// Brand color scale (primary: #FF6B01 - Orange)
 const colors = {
     brand: {
-        50: '#eef2ff',
-        100: '#e0e7ff',
-        200: '#c7d2fe',
-        300: '#a5b4fc',
-        400: '#818cf8',
-        500: '#6366f1', // Primary
-        600: '#4f46e5',
-        700: '#4338ca',
-        800: '#3730a3',
-        900: '#312e81',
+        50: '#fff7ed',
+        100: '#ffedd5',
+        200: '#fed7aa',
+        300: '#fdba74',
+        400: '#fb923c',
+        500: '#FF6B01', // Primary — matches dashboard
+        600: '#E85F00',
+        700: '#c2410c',
+        800: '#9a3412',
+        900: '#7c2d12',
     },
     accent: {
-        50: '#faf5ff',
-        100: '#f3e8ff',
-        200: '#e9d5ff',
-        300: '#d8b4fe',
-        400: '#c084fc',
-        500: '#8b5cf6', // Secondary
-        600: '#7c3aed',
-        700: '#6d28d9',
-        800: '#5b21b6',
-        900: '#4c1d95',
+        50: '#fffbeb',
+        100: '#fef3c7',
+        200: '#fde68a',
+        300: '#fcd34d',
+        400: '#fbbf24',
+        500: '#f59e0b', // Secondary — warm amber
+        600: '#d97706',
+        700: '#b45309',
+        800: '#92400e',
+        900: '#78350f',
     },
     success: {
         50: '#ecfdf5',
         100: '#d1fae5',
         200: '#a7f3d0',
         300: '#6ee7b7',
-        400: '#34d399',
+        400: '#4ADE80',
         500: '#10b981',
         600: '#059669',
         700: '#047857',
@@ -46,7 +46,7 @@ const colors = {
         100: '#fee2e2',
         200: '#fecaca',
         300: '#fca5a5',
-        400: '#f87171',
+        400: '#F87171',
         500: '#ef4444',
         600: '#dc2626',
         700: '#b91c1c',
@@ -60,11 +60,11 @@ const colors = {
         500: '#f59e0b',
         600: '#d97706',
     },
-    // Dark theme surface colors
+    // Dark theme surface colors — matches dashboard
     surface: {
-        bg: '#0a0a0f',
-        card: '#12121a',
-        cardHover: '#1a1a24',
+        bg: '#1A1A1A',
+        card: '#353535',
+        cardHover: '#444444',
         border: 'rgba(255, 255, 255, 0.08)',
         borderHover: 'rgba(255, 255, 255, 0.15)',
     },
@@ -130,9 +130,9 @@ const shadows = {
     md: '0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3)',
     lg: '0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3)',
     xl: '0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.3)',
-    glow: '0 0 20px rgba(99, 102, 241, 0.3)',
-    glowLg: '0 0 40px rgba(99, 102, 241, 0.4)',
-    glowAccent: '0 0 20px rgba(139, 92, 246, 0.3)',
+    glow: '0 0 20px rgba(255, 107, 1, 0.35)',
+    glowLg: '0 0 40px rgba(255, 107, 1, 0.45)',
+    glowAccent: '0 0 20px rgba(245, 158, 11, 0.3)',
 };
 
 // Component style overrides
@@ -209,7 +209,7 @@ const components = {
                     _focus: {
                         bg: 'whiteAlpha.100',
                         borderColor: 'brand.500',
-                        boxShadow: '0 0 0 1px var(--chakra-colors-brand-500)',
+                        boxShadow: '0 0 0 1px rgba(255, 107, 1, 0.5)',
                     },
                 },
             },
