@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Dependencies
 node_modules/
 .pnp
@@ -47,3 +48,40 @@ backend/env (1)
 # Package lock files (optional — keep diffs cleaner)
 # Uncomment the line below if you prefer not to track lock files:
 # package-lock.json
+=======
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment variables (contains secrets)
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+build/
+out/
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Testing
+coverage/
+
+# Misc
+*.log
+>>>>>>> 79c604a68216a460d79e180e4e15b8ae4824ea39
