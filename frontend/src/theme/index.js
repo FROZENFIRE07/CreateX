@@ -1,6 +1,7 @@
 /**
  * SACO Custom Theme
  * Chakra UI theme with design tokens for the AI content platform
+ * Supports Dark & Light modes via semantic tokens
  */
 
 import { extendTheme } from '@chakra-ui/react';
@@ -60,7 +61,7 @@ const colors = {
         500: '#f59e0b',
         600: '#d97706',
     },
-    // Dark theme surface colors — matches dashboard
+    // Surface colors kept as raw values for backward compat
     surface: {
         bg: '#1A1A1A',
         card: '#353535',
@@ -167,52 +168,53 @@ const components = {
                     color: 'white',
                 },
             },
-            ghost: {
-                color: 'gray.400',
+            ghost: (props) => ({
+                color: props.colorMode === 'dark' ? 'gray.400' : 'gray.600',
                 _hover: {
-                    bg: 'whiteAlpha.100',
-                    color: 'white',
+                    bg: props.colorMode === 'dark' ? 'whiteAlpha.100' : 'blackAlpha.50',
+                    color: props.colorMode === 'dark' ? 'white' : 'gray.900',
                 },
-            },
+            }),
         },
         defaultProps: {
             variant: 'primary',
         },
     },
     Card: {
-        baseStyle: {
+        baseStyle: (props) => ({
             container: {
-                bg: 'surface.card',
+                bg: props.colorMode === 'dark' ? 'surface.card' : 'white',
                 borderRadius: 'xl',
                 border: '1px solid',
-                borderColor: 'surface.border',
+                borderColor: props.colorMode === 'dark' ? 'surface.border' : 'gray.200',
                 transition: 'all 0.2s ease',
                 _hover: {
-                    borderColor: 'surface.borderHover',
+                    borderColor: props.colorMode === 'dark' ? 'surface.borderHover' : 'gray.300',
                     boxShadow: 'lg',
                 },
             },
-        },
+        }),
     },
     Input: {
         variants: {
-            filled: {
+            filled: (props) => ({
                 field: {
-                    bg: 'whiteAlpha.50',
+                    bg: props.colorMode === 'dark' ? 'whiteAlpha.50' : 'gray.50',
                     border: '1px solid',
-                    borderColor: 'surface.border',
+                    borderColor: props.colorMode === 'dark' ? 'surface.border' : 'gray.200',
                     borderRadius: 'lg',
+                    color: props.colorMode === 'dark' ? 'white' : 'gray.800',
                     _hover: {
-                        bg: 'whiteAlpha.100',
-                        borderColor: 'surface.borderHover',
+                        bg: props.colorMode === 'dark' ? 'whiteAlpha.100' : 'gray.100',
+                        borderColor: props.colorMode === 'dark' ? 'surface.borderHover' : 'gray.300',
                     },
                     _focus: {
-                        bg: 'whiteAlpha.100',
+                        bg: props.colorMode === 'dark' ? 'whiteAlpha.100' : 'white',
                         borderColor: 'brand.500',
                         boxShadow: '0 0 0 1px rgba(255, 107, 1, 0.5)',
                     },
                 },
-            },
+            }),
         },
         defaultProps: {
             variant: 'filled',
@@ -260,10 +262,10 @@ const components = {
 
 // Global styles
 const styles = {
-    global: {
+    global: (props) => ({
         'html, body': {
-            bg: 'surface.bg',
-            color: 'gray.100',
+            bg: props.colorMode === 'dark' ? 'surface.bg' : '#F7F7F8',
+            color: props.colorMode === 'dark' ? 'gray.100' : 'gray.800',
             lineHeight: 'tall',
         },
         '*::selection': {
@@ -275,23 +277,61 @@ const styles = {
             height: '8px',
         },
         '::-webkit-scrollbar-track': {
-            bg: 'surface.bg',
+            bg: props.colorMode === 'dark' ? 'surface.bg' : 'gray.100',
         },
         '::-webkit-scrollbar-thumb': {
-            bg: 'whiteAlpha.200',
+            bg: props.colorMode === 'dark' ? 'whiteAlpha.200' : 'blackAlpha.200',
             borderRadius: 'full',
         },
         '::-webkit-scrollbar-thumb:hover': {
-            bg: 'whiteAlpha.300',
+            bg: props.colorMode === 'dark' ? 'whiteAlpha.300' : 'blackAlpha.300',
         },
-    },
+    }),
 };
 
-// Semantic tokens for dark mode (primarily dark theme)
+// Semantic tokens for dark/light mode
 const semanticTokens = {
     colors: {
-        'chakra-body-bg': 'surface.bg',
-        'chakra-body-text': 'gray.100',
+        'chakra-body-bg': {
+            _dark: 'surface.bg',
+            _light: '#F7F7F8',
+        },
+        'chakra-body-text': {
+            _dark: 'gray.100',
+            _light: 'gray.800',
+        },
+        'surface-bg': {
+            _dark: '#1A1A1A',
+            _light: '#F7F7F8',
+        },
+        'surface-card': {
+            _dark: '#353535',
+            _light: '#FFFFFF',
+        },
+        'surface-card-hover': {
+            _dark: '#444444',
+            _light: '#F5F5F5',
+        },
+        'surface-border': {
+            _dark: 'rgba(255, 255, 255, 0.08)',
+            _light: 'rgba(0, 0, 0, 0.08)',
+        },
+        'surface-border-hover': {
+            _dark: 'rgba(255, 255, 255, 0.15)',
+            _light: 'rgba(0, 0, 0, 0.15)',
+        },
+        'text-primary': {
+            _dark: 'gray.100',
+            _light: 'gray.800',
+        },
+        'text-secondary': {
+            _dark: 'gray.400',
+            _light: 'gray.600',
+        },
+        'text-muted': {
+            _dark: 'gray.500',
+            _light: 'gray.500',
+        },
     },
 };
 
