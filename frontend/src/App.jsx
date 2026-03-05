@@ -9,9 +9,9 @@ import { AnimatePresence } from 'framer-motion';
 import {
     Box, Flex, HStack, VStack, Text, Button, IconButton,
     Avatar, Spinner, Center, Link, Menu, MenuButton, MenuList, MenuItem,
-    Tooltip, Image,
+    Tooltip, Image, useColorMode, useColorModeValue,
 } from '@chakra-ui/react';
-import { ChevronDownIcon } from '@chakra-ui/icons';
+import { ChevronDownIcon, SunIcon, MoonIcon } from '@chakra-ui/icons';
 import { motion } from 'framer-motion';
 import {
     FiZap, FiHome, FiSettings, FiLogOut, FiBarChart2, FiGrid, FiUploadCloud,
@@ -21,6 +21,7 @@ import { FaXTwitter } from 'react-icons/fa6';
 import { FiMail, FiBookOpen } from 'react-icons/fi';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { BrandDNAProvider, useBrandDNA } from './context/BrandDNAContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { PageTransition, showToast, KeyboardShortcutsModal, useKeyboardShortcuts } from './components/common';
 import WelcomeScreen from './components/Welcome/WelcomeScreen';
 
@@ -34,6 +35,7 @@ const PerformanceAnalytics = lazy(() => import('./components/Analytics/Performan
 const Settings = lazy(() => import('./components/Settings'));
 const AgentWorkflowPage = lazy(() => import('./components/AgentWorkflow/AgentWorkflowPage'));
 const LiveAgentWorkspace = lazy(() => import('./components/AgentWorkspace/LiveAgentWorkspace'));
+const ContentDetail = lazy(() => import('./components/Content/ContentDetail'));
 
 const MotionBox = motion(Box);
 
@@ -60,6 +62,8 @@ function SideNav() {
     const [isExpanded, setIsExpanded] = useState(false);
     const location = useLocation();
     const navigate = useNavigate();
+    const { colorMode } = useColorMode();
+    const isDark = colorMode === 'dark';
 
     const navItems = [
         { icon: FiHome, label: 'Dashboard', path: '/' },
@@ -88,12 +92,12 @@ function SideNav() {
             onMouseLeave={() => setIsExpanded(false)}
             animate={{ width: isExpanded ? 220 : 60 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
-            bg="rgba(53, 53, 53, 0.85)"
+            bg={isDark ? 'rgba(53, 53, 53, 0.85)' : 'rgba(255, 255, 255, 0.9)'}
             backdropFilter="blur(20px)"
-            border="1px solid" borderColor="rgba(255, 255, 255, 0.08)"
+            border="1px solid" borderColor={isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'}
             borderRight="none" roundedLeft="2xl"
             py={4} px={2} overflow="hidden"
-            boxShadow="-4px 0 30px rgba(0, 0, 0, 0.3)"
+            boxShadow={isDark ? '-4px 0 30px rgba(0, 0, 0, 0.3)' : '-4px 0 30px rgba(0, 0, 0, 0.08)'}
         >
             {/* Orange accent line */}
             <Box position="absolute" top={0} left={0} w="2px" h="100%" bg="#FF6B01" opacity={0.6} />
@@ -186,6 +190,8 @@ function SideNav() {
 function Navbar() {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
+    const { colorMode, toggleColorMode } = useColorMode();
+    const isDark = colorMode === 'dark';
 
     let brandName = '';
     try {
@@ -208,9 +214,9 @@ function Navbar() {
         <Box
             as="nav"
             position="sticky" top={0} zIndex={100}
-            bg="rgba(26, 26, 26, 0.85)"
+            bg={isDark ? 'rgba(26, 26, 26, 0.85)' : 'rgba(255, 255, 255, 0.9)'}
             backdropFilter="blur(20px)"
-            borderBottom="1px solid" borderColor="surface.border"
+            borderBottom="1px solid" borderColor={isDark ? 'surface.border' : 'rgba(0,0,0,0.08)'}
         >
             <Flex maxW="1400px" mx="auto" px={{ base: 4, md: 6 }} py={3}
                 justify="space-between" align="center">
@@ -225,7 +231,7 @@ function Navbar() {
                                 <FiZap size={20} color="white" />
                             </Box>
                         )}
-                        <Text fontSize="xl" fontWeight="700" color="white"
+                        <Text fontSize="xl" fontWeight="700" color={isDark ? 'white' : 'gray.800'}
                             display={{ base: 'none', sm: 'block' }}>
                             {brandName || 'CreateX'}
                         </Text>
@@ -235,10 +241,27 @@ function Navbar() {
                 {/* Greeting + profile */}
                 <HStack spacing={3}>
                     {brandName && (
-                        <Text fontSize="sm" color="gray.400" display={{ base: 'none', md: 'block' }}>
-                            Hey, <Text as="span" color="white" fontWeight="600">{brandName}</Text> 👋
+                        <Text fontSize="sm" color={isDark ? 'gray.400' : 'gray.600'} display={{ base: 'none', md: 'block' }}>
+                            Hey, <Text as="span" color={isDark ? 'white' : 'gray.800'} fontWeight="600">{brandName}</Text> 👋
                         </Text>
                     )}
+                    {/* Theme Toggle */}
+                    <Tooltip label={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'} hasArrow>
+                        <IconButton
+                            aria-label="Toggle theme"
+                            icon={isDark ? <SunIcon /> : <MoonIcon />}
+                            onClick={toggleColorMode}
+                            variant="ghost"
+                            size="sm"
+                            color={isDark ? 'gray.400' : 'gray.600'}
+                            _hover={{
+                                bg: isDark ? 'whiteAlpha.100' : 'blackAlpha.50',
+                                color: isDark ? 'white' : 'gray.800',
+                                transform: 'rotate(20deg)',
+                            }}
+                            transition="all 0.2s"
+                        />
+                    </Tooltip>
                     <Tooltip label={user ? (user.username || 'Profile') : 'Sign In'} hasArrow>
                         <Avatar
                             size="sm"
@@ -260,9 +283,10 @@ function Navbar() {
 function Layout({ children }) {
     const navigate = useNavigate();
     const { isOpen, onClose } = useKeyboardShortcuts(navigate);
+    const bgColor = useColorModeValue('#F7F7F8', 'surface.bg');
 
     return (
-        <Box minH="100vh" bg="surface.bg">
+        <Box minH="100vh" bg={bgColor}>
             <Navbar />
             <Box as="main" maxW="1400px" mx="auto" px={{ base: 4, md: 6 }} py={6}>
                 <PageTransition>{children}</PageTransition>
@@ -332,6 +356,10 @@ function AnimatedRoutes() {
                             <ProtectedRoute><LiveAgentWorkspace /></ProtectedRoute>
                         } />
 
+                        <Route path="/content/:id" element={
+                            <ProtectedRoute><ContentDetail /></ProtectedRoute>
+                        } />
+
                         {/* 404 */}
                         <Route path="*" element={
                             <Center h="100vh" bg="surface.bg">
@@ -365,11 +393,13 @@ function App() {
     return (
         <AuthProvider>
             <BrandDNAProvider>
-                <BrowserRouter>
-                    <WelcomeScreen>
-                        <AnimatedRoutes />
-                    </WelcomeScreen>
-                </BrowserRouter>
+                <ThemeProvider>
+                    <BrowserRouter>
+                        <WelcomeScreen>
+                            <AnimatedRoutes />
+                        </WelcomeScreen>
+                    </BrowserRouter>
+                </ThemeProvider>
             </BrandDNAProvider>
         </AuthProvider>
     );
