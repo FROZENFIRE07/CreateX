@@ -192,6 +192,82 @@ router.put('/guidelines', async (req, res) => {
 });
 
 /**
+ * PUT /api/brand/update
+ * Full update of Brand DNA — used by Settings page "Save Changes"
+ */
+router.put('/update', async (req, res) => {
+    try {
+        const {
+            name,
+            mission,
+            vision,
+            tone,
+            audience,
+            coreValues,
+            typography,
+            logoDataUrl,
+            brandGuidelines
+        } = req.body;
+
+        let brandDNA = await BrandDNA.findOne({ userId: req.userId });
+
+        if (!brandDNA) {
+            return res.status(404).json({ error: 'Brand DNA not found. Create one first.' });
+        }
+
+        // Update fields if provided
+        if (name !== undefined) brandDNA.name = name;
+        if (mission !== undefined) brandDNA.guidelines.voice = mission;
+        if (vision !== undefined) {
+            // Store vision in a custom field or append to voice
+            brandDNA.guidelines.voice = [mission, vision].filter(Boolean).join('\n\nVision: ');
+        }
+        if (tone !== undefined) {
+            brandDNA.guidelines.tone = Array.isArray(tone) ? tone.join(', ') : tone;
+        }
+        if (audience !== undefined) brandDNA.guidelines.targetAudience = audience;
+        if (coreValues !== undefined) brandDNA.guidelines.values = coreValues;
+
+        await brandDNA.save();
+
+        // Re-embed with updated rawText
+        if (brandDNA.rawText && brandDNA.rawText.length > 10) {
+            try {
+                if (brandDNA.vectorId) {
+                    await vectorStore.delete(brandDNA.vectorId);
+                }
+                const vectorId = await vectorStore.upsert(brandDNA.rawText, {
+                    type: 'brand',
+                    userId: req.userId.toString(),
+                    brandId: brandDNA._id.toString()
+                });
+                brandDNA.vectorId = vectorId;
+                await brandDNA.save();
+            } catch (vecError) {
+                console.error('Vector update failed:', vecError.message);
+            }
+        }
+
+        res.json({
+            message: 'Brand DNA updated successfully',
+            brandDNA: {
+                id: brandDNA._id,
+                name: brandDNA.name,
+                guidelines: brandDNA.guidelines,
+                examples: brandDNA.examples,
+                usageCount: brandDNA.usageCount,
+                avgScore: brandDNA.avgScore,
+                createdAt: brandDNA.createdAt,
+                updatedAt: brandDNA.updatedAt
+            }
+        });
+    } catch (error) {
+        console.error('Brand DNA update error:', error);
+        res.status(500).json({ error: 'Failed to update brand DNA' });
+    }
+});
+
+/**
  * POST /api/brand/examples
  * Add example content
  */
