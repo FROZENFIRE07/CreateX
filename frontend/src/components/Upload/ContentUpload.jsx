@@ -49,6 +49,7 @@ import {
 } from 'react-icons/fi';
 import api from '../../services/api';
 import { showToast } from '../common';
+import PreviewGrid from './PreviewGrid';
 
 const MotionBox = motion(Box);
 const MotionFlex = motion(Flex);
@@ -338,52 +339,37 @@ function ContentUpload() {
         );
     };
 
-    // Manual upload: save directly to localStorage platform libraries
-    const handleManualSave = () => {
-        if (selectedPlatforms.length === 0) {
-            setError('Select at least one target platform');
-            showToast.warning('Please select at least one platform');
-            return;
-        }
-        if (!title.trim()) {
-            setError('Please enter a title');
-            showToast.warning('Title is required');
-            return;
-        }
-
-        selectedPlatforms.forEach((platformId) => {
-            const storageKey = `createx_library_${platformId}`;
-            const existing = JSON.parse(localStorage.getItem(storageKey) || '{}');
-            // Find the first tab key or use 'drafts'
-            const tabKeys = Object.keys(existing);
-            const targetTab = tabKeys.find((k) => k.toLowerCase().includes('draft')) || tabKeys[0] || 'Drafts';
-            const items = existing[targetTab] || [];
-            items.push({
-                id: Date.now().toString(),
-                title: title,
-                content: content,
-                date: new Date().toISOString().split('T')[0],
-                status: 'Draft',
-            });
-            existing[targetTab] = items;
-            localStorage.setItem(storageKey, JSON.stringify(existing));
+    // Publish a single variant to its platform library in localStorage
+    const publishToLibrary = (variant) => {
+        const platformId = variant.platform?.toLowerCase();
+        if (!platformId) return;
+        const storageKey = `createx_library_${platformId}`;
+        const existing = JSON.parse(localStorage.getItem(storageKey) || '{}');
+        const tabKeys = Object.keys(existing);
+        const targetTab = tabKeys.find((k) => k.toLowerCase().includes('draft')) || tabKeys[0] || 'Drafts';
+        const items = existing[targetTab] || [];
+        items.push({
+            id: Date.now().toString() + '_' + platformId,
+            title: title || 'Generated Content',
+            content: variant.content,
+            date: new Date().toISOString().split('T')[0],
+            status: 'Draft',
+            consistencyScore: variant.consistencyScore,
         });
+        existing[targetTab] = items;
+        localStorage.setItem(storageKey, JSON.stringify(existing));
+    };
 
-        showToast.success(`Content saved to ${selectedPlatforms.length} platform library(ies)`);
-        setTitle('');
-        setContent('');
+    // Publish ALL variants at once (used by Auto mode)
+    const publishAllToLibraries = (generatedVariants) => {
+        generatedVariants.forEach(publishToLibrary);
+        showToast.celebrate(`Published to ${generatedVariants.length} platform(s)! 🎉`);
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Manual mode — save directly to libraries
-        if (uploadMode === 'manual') {
-            handleManualSave();
-            return;
-        }
-
-        // Auto mode — AI orchestration
+        // Validation (same for both modes)
         if (selectedPlatforms.length === 0) {
             setError('Select at least one target platform');
             showToast.warning('Please select at least one platform');
@@ -399,6 +385,9 @@ function ContentUpload() {
         setLoading(true);
         setError('');
         setCurrentStep(0);
+        setStatus(null);
+        setVariants([]);
+        setKpis(null);
         setLogs([{ message: 'Initializing orchestration pipeline...' }]);
 
         try {
@@ -417,8 +406,13 @@ function ContentUpload() {
 
             setLoading(false);
 
-            // Redirect to Full-Screen Agent Workflow (slideshow)
-            navigate(`/workflow/${newContentId}`);
+            // In Auto mode, redirect to workflow page (auto-publish handled on completion)
+            // In Manual mode, stay on this page to show preview cards
+            if (uploadMode === 'auto') {
+                navigate(`/workflow/${newContentId}`);
+            } else {
+                setOrchestrating(true);
+            }
 
         } catch (err) {
             setError(err.response?.data?.error || 'Upload failed');
@@ -490,7 +484,7 @@ function ContentUpload() {
                     </MotionBox>
                 )}
 
-                <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={6}>
+                <SimpleGrid columns={1} spacing={6}>
                     {/* Left - Form */}
                     <VStack spacing={6} align="stretch">
                         {/* Drag & Drop Zone */}
@@ -627,12 +621,25 @@ function ContentUpload() {
                                             isChecked={uploadMode === 'auto'}
                                             onChange={() => setUploadMode(uploadMode === 'auto' ? 'manual' : 'auto')}
                                             size="md"
+                                            isDisabled={orchestrating || status === 'completed'}
                                         />
                                         <Text fontSize="sm" fontWeight={uploadMode === 'auto' ? '700' : '400'}
                                             color={uploadMode === 'auto' ? T.primary : 'gray.500'}>
-                                            Auto (AI)
+                                            Auto-Publish
                                         </Text>
                                     </HStack>
+
+                                    {/* Mode hint */}
+                                    <Box bg={T.primaryFaint} rounded="xl" p={3} border="1px solid" borderColor={`${T.primary}30`}>
+                                        <HStack spacing={2}>
+                                            <Icon as={FiZap} color={T.primary} boxSize={4} />
+                                            <Text fontSize="xs" color="gray.400">
+                                                {uploadMode === 'auto'
+                                                    ? 'Auto-Publish: AI generates and automatically publishes content to all selected platforms.'
+                                                    : 'Manual: AI generates content, then you review and choose which platforms to publish.'}
+                                            </Text>
+                                        </HStack>
+                                    </Box>
 
                                     {/* Submit */}
                                     <Button
@@ -641,161 +648,41 @@ function ContentUpload() {
                                         bg={T.primary}
                                         color={T.white}
                                         isLoading={loading || orchestrating}
-                                        loadingText={loading ? 'Creating...' : 'Orchestrating...'}
+                                        loadingText={loading ? 'Creating...' : 'Generating...'}
                                         rightIcon={<FiArrowRight />}
                                         rounded="full"
                                         fontWeight="700"
+                                        isDisabled={status === 'completed'}
                                         boxShadow={`0 0 20px ${T.primaryGlow}`}
                                         _hover={{ bg: T.primaryHover, transform: 'translateY(-2px)', boxShadow: `0 0 35px ${T.primaryGlowStrong}` }}
                                         _active={{ transform: 'translateY(0)' }}
                                     >
-                                        {uploadMode === 'auto' ? '🚀 Start Orchestration' : '💾 Save to Libraries'}
+                                        {uploadMode === 'auto' ? '🚀 Generate & Publish' : '✨ Generate Content'}
                                     </Button>
                                 </VStack>
                             </form>
                         </MotionBox>
                     </VStack>
-
-                    {/* Right Panel — content depends on toggle mode */}
-                    <VStack spacing={6} align="stretch">
-                        {uploadMode === 'auto' ? (
-                            <MotionBox
-                                key="auto-preview"
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.3 }}
-                                {...glassCard}
-                                rounded="3xl"
-                                overflow="hidden"
-                                position="sticky"
-                                top="80px"
-                            >
-                                <Box position="absolute" top={0} left={0} w="100%" h="2px" bg={T.primary} opacity={0.6} />
-                                <HStack p={4} borderBottom="1px solid" borderColor="rgba(255,255,255,0.06)">
-                                    <Icon as={FiEdit3} color={T.primary} boxSize={4} />
-                                    <Heading size="sm" color={T.white}>Upload Preview</Heading>
-                                </HStack>
-                                <VStack p={5} spacing={4} align="stretch">
-                                    <Box>
-                                        <Text fontSize="2xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="wider" mb={1}>Title</Text>
-                                        <Text color={title ? T.white : 'gray.600'} fontWeight="600">{title || 'No title yet...'}</Text>
-                                    </Box>
-                                    <Divider borderColor="rgba(255,255,255,0.06)" />
-                                    <Box>
-                                        <HStack justify="space-between" mb={1}>
-                                            <Text fontSize="2xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="wider">Content</Text>
-                                            <Text fontSize="xs" color="gray.600">{content.length} chars</Text>
-                                        </HStack>
-                                        <Box bg={T.bgDeep} rounded="xl" p={4} maxH="200px" overflowY="auto">
-                                            <Text fontSize="sm" color={content ? 'gray.400' : 'gray.600'} lineHeight="1.7" whiteSpace="pre-wrap">
-                                                {content ? (content.length > 500 ? content.slice(0, 500) + '...' : content) : 'Paste or drop your content to see a preview here...'}
-                                            </Text>
-                                        </Box>
-                                    </Box>
-                                    <Divider borderColor="rgba(255,255,255,0.06)" />
-                                    <Box>
-                                        <Text fontSize="2xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="wider" mb={2}>Target Platforms</Text>
-                                        {selectedPlatforms.length > 0 ? (
-                                            <HStack spacing={2} flexWrap="wrap">
-                                                {selectedPlatforms.map((pId) => {
-                                                    const p = PLATFORMS.find((x) => x.id === pId);
-                                                    return p ? (
-                                                        <Badge key={pId} bg={`${p.color}20`} color={p.color} rounded="full" px={3} py={1} fontSize="xs" border="1px solid" borderColor={`${p.color}40`}>
-                                                            <HStack spacing={1}><Icon as={p.icon} boxSize={3} /><Text>{p.name}</Text></HStack>
-                                                        </Badge>
-                                                    ) : null;
-                                                })}
-                                            </HStack>
-                                        ) : (
-                                            <Text fontSize="sm" color="gray.600">No platforms selected</Text>
-                                        )}
-                                    </Box>
-                                    <Divider borderColor="rgba(255,255,255,0.06)" />
-                                    <Box bg={T.primaryFaint} rounded="xl" p={3} border="1px solid" borderColor={`${T.primary}30`}>
-                                        <HStack spacing={2}>
-                                            <Icon as={FiZap} color={T.primary} boxSize={4} />
-                                            <Text fontSize="xs" color="gray.400">Auto mode will process your content through AI agents and redirect to the workflow view.</Text>
-                                        </HStack>
-                                    </Box>
-                                </VStack>
-                            </MotionBox>
-                        ) : (
-                            <>
-                                <MotionBox
-                                    key="manual-logs"
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.3 }}
-                                    {...glassCard}
-                                    rounded="3xl"
-                                    overflow="hidden"
-                                    position="sticky"
-                                    top="80px"
-                                >
-                                    <Box position="absolute" top={0} left={0} w="100%" h="2px" bg={T.primary} opacity={0.6} />
-                                    <HStack justify="space-between" p={4} borderBottom="1px solid" borderColor="rgba(255,255,255,0.06)">
-                                        <HStack spacing={2}>
-                                            <Icon as={FiActivity} color={T.primary} boxSize={4} />
-                                            <Heading size="sm" color={T.white}>Saved Content</Heading>
-                                        </HStack>
-                                        {orchestrating && status !== 'completed' && (
-                                            <Badge bg={T.primaryFaint} color={T.primary} rounded="full" px={2.5} fontSize="2xs" border="1px solid" borderColor={T.primary}>Processing...</Badge>
-                                        )}
-                                        {status === 'completed' && (
-                                            <Badge bg="rgba(74,222,128,0.15)" color="#4ADE80" rounded="full" px={2.5} fontSize="2xs" border="1px solid" borderColor="#4ADE80">Complete</Badge>
-                                        )}
-                                    </HStack>
-                                    <Box maxH="300px" overflowY="auto" p={4}>
-                                        {logs.length === 0 ? (
-                                            <Text color="gray.500" textAlign="center" py={8}>Saved content will appear here after you upload</Text>
-                                        ) : (
-                                            <VStack align="stretch" spacing={0}>
-                                                {logs.map((log, idx) => (<LogMessage key={idx} message={log.message} index={idx} />))}
-                                                <div ref={logsEndRef} />
-                                            </VStack>
-                                        )}
-                                    </Box>
-                                    {kpis && (
-                                        <SimpleGrid columns={3} gap={4} p={4} borderTop="1px solid" borderColor="rgba(255,255,255,0.06)" bg={T.bgDeep}>
-                                            <VStack spacing={0}><Text fontSize="xl" fontWeight="700" color="#4ADE80">{kpis.hitRate}%</Text><Text fontSize="xs" color="gray.500">Hit Rate</Text></VStack>
-                                            <VStack spacing={0}><Text fontSize="xl" fontWeight="700" color={T.white}>{kpis.publishedCount}</Text><Text fontSize="xs" color="gray.500">Published</Text></VStack>
-                                            <VStack spacing={0}><Text fontSize="xl" fontWeight="700" color={T.white}>{kpis.processingTime}s</Text><Text fontSize="xs" color="gray.500">Time</Text></VStack>
-                                        </SimpleGrid>
-                                    )}
-                                </MotionBox>
-                                {status === 'completed' && variants.length > 0 && (
-                                    <MotionBox initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} {...glassCard} rounded="3xl" overflow="hidden">
-                                        <Box position="absolute" top={0} left={0} w="100%" h="2px" bg={T.primary} opacity={0.6} />
-                                        <HStack justify="space-between" p={4} borderBottom="1px solid" borderColor="rgba(255,255,255,0.06)">
-                                            <HStack spacing={2}><Icon as={FiZap} color={T.primary} boxSize={4} /><Heading size="sm" color={T.white}>Generated Variants</Heading></HStack>
-                                            <Button size="sm" bg={T.primary} color={T.white} rightIcon={<FiArrowRight />} onClick={() => navigate(`/content/${contentId}`)} rounded="full" boxShadow={`0 0 15px ${T.primaryGlow}`} _hover={{ bg: T.primaryHover, boxShadow: `0 0 25px ${T.primaryGlowStrong}` }}>View All</Button>
-                                        </HStack>
-                                        <VStack p={4} spacing={3} align="stretch">
-                                            {variants.slice(0, 2).map((variant, idx) => {
-                                                const platform = PLATFORMS.find(p => p.id === variant.platform);
-                                                return (
-                                                    <MotionBox key={idx} bg={T.bgDeep} borderRadius="xl" p={4} border="1px solid" borderColor="rgba(255,255,255,0.06)" whileHover={{ y: -2, transition: { duration: 0.2 } }} cursor="pointer">
-                                                        <HStack mb={2}>
-                                                            <Icon as={platform?.icon || FiFileText} color={platform?.color} boxSize={4} />
-                                                            <Text fontWeight="600" color={T.white} textTransform="capitalize">{variant.platform}</Text>
-                                                            <Badge bg="rgba(74,222,128,0.15)" color="#4ADE80" rounded="full" px={2} fontSize="2xs" ml="auto">{variant.consistencyScore}%</Badge>
-                                                        </HStack>
-                                                        <Text fontSize="sm" color="gray.400" noOfLines={2}>{variant.content}</Text>
-                                                    </MotionBox>
-                                                );
-                                            })}
-                                            {variants.length > 2 && (<Text color="gray.500" fontSize="sm" textAlign="center">+{variants.length - 2} more variants</Text>)}
-                                        </VStack>
-                                    </MotionBox>
-                                )}
-                            </>
-                        )}
-                    </VStack>
                 </SimpleGrid>
+
+                {/* Manual Mode: show PreviewGrid with publish toggles after generation */}
+                {uploadMode === 'manual' && status === 'completed' && variants.length > 0 && (
+                    <PreviewGrid
+                        variants={variants}
+                        onUpdateVariant={(platform, newContent) => {
+                            setVariants(prev => prev.map(v =>
+                                v.platform === platform ? { ...v, content: newContent } : v
+                            ));
+                        }}
+                        onPublish={(variant) => {
+                            publishToLibrary(variant);
+                            showToast.success(`Published to ${variant.platform} library!`);
+                        }}
+                    />
+                )}
             </VStack>
         </>
     );
 }
 
 export default ContentUpload;
-
