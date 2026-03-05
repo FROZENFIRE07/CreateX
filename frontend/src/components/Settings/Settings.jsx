@@ -9,7 +9,7 @@ import {
     Avatar, Badge, SimpleGrid, FormControl, FormLabel, Select, Spinner,
     Center, Icon, useDisclosure, Modal, ModalOverlay, ModalContent,
     ModalHeader, ModalBody, ModalFooter, ModalCloseButton, Textarea,
-    Wrap, WrapItem, Tag, TagLabel, TagCloseButton, Image,
+    Wrap, WrapItem, Tag, TagLabel, TagCloseButton, Image, useColorMode,
 } from '@chakra-ui/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiSettings as FiSettingsIcon } from 'react-icons/fi';
@@ -38,11 +38,6 @@ const TONE_OPTIONS = [
 ];
 
 const FONT_OPTIONS = ['Inter', 'Roboto', 'Outfit', 'Poppins', 'Montserrat', 'Open Sans', 'Lato'];
-
-const PRESET_COLORS = [
-    '#FF6B01', '#E85F00', '#F59E0B', '#22C55E', '#3B82F6',
-    '#6366F1', '#8B5CF6', '#EC4899', '#EF4444', '#14B8A6',
-];
 
 // Settings Section Component
 const SettingsSection = ({ title, icon, children, delay = 0 }) => (
@@ -78,12 +73,14 @@ const SETTINGS_TABS = [
 function Settings() {
     const { user, logout } = useAuth();
     const { brandDNA, setBrandDNA } = useBrandDNA();
+    const { colorMode, setColorMode } = useColorMode();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const { isOpen, onOpen, onClose } = useDisclosure();
     const fileInputRef = useRef(null);
     const [valueInput, setValueInput] = useState('');
     const [activeTab, setActiveTab] = useState('general');
+    const [savingDna, setSavingDna] = useState(false);
 
     const [settings, setSettings] = useState({
         name: '', email: '',
@@ -148,12 +145,37 @@ function Settings() {
     };
 
     const updateDna = (key, val) => setDna((p) => ({ ...p, [key]: val }));
-    const updateDnaColor = (key, val) => setDna((p) => ({
-        ...p, colorPalette: { ...p.colorPalette, [key]: val },
-    }));
     const updateDnaFont = (key, val) => setDna((p) => ({
         ...p, typography: { ...p.typography, [key]: val },
     }));
+
+    const handleSaveBrandDNA = async () => {
+        setSavingDna(true);
+        try {
+            // Save to backend
+            await api.put('/brand/update', {
+                name: dna.brandName,
+                mission: dna.mission,
+                vision: dna.vision,
+                tone: dna.toneOfVoice,
+                audience: dna.targetAudience,
+                coreValues: dna.coreValues,
+                typography: dna.typography,
+                logoDataUrl: dna.logoDataUrl,
+                brandGuidelines: dna.brandGuidelines,
+            });
+            // Update global context instantly
+            setBrandDNA(dna);
+            showToast.success('Brand DNA saved successfully');
+        } catch (err) {
+            console.error('Failed to save Brand DNA:', err);
+            // Still update locally even if API fails
+            setBrandDNA(dna);
+            showToast.success('Brand DNA saved locally');
+        } finally {
+            setSavingDna(false);
+        }
+    };
 
     const addValue = () => {
         const v = valueInput.trim();
@@ -257,12 +279,28 @@ function Settings() {
 
                         {/* Mission */}
                         <FormControl>
-                            <FormLabel color="gray.400" fontSize="sm">Mission / Vision</FormLabel>
+                            <FormLabel color="gray.400" fontSize="sm">Mission</FormLabel>
                             <Textarea
                                 value={dna.mission || ''}
                                 onChange={(e) => updateDna('mission', e.target.value)}
                                 bg="surface.bg" border="1px solid" borderColor="surface.border"
                                 minH="80px" resize="vertical"
+                                placeholder="What is your brand's mission?"
+                                _focus={{ borderColor: 'brand.500', boxShadow: `0 0 0 1px ${T.primaryGlow}` }}
+                            />
+                        </FormControl>
+
+                        <Divider borderColor="surface.border" />
+
+                        {/* Vision */}
+                        <FormControl>
+                            <FormLabel color="gray.400" fontSize="sm">Vision</FormLabel>
+                            <Textarea
+                                value={dna.vision || ''}
+                                onChange={(e) => updateDna('vision', e.target.value)}
+                                bg="surface.bg" border="1px solid" borderColor="surface.border"
+                                minH="80px" resize="vertical"
+                                placeholder="What is your brand's long-term vision?"
                                 _focus={{ borderColor: 'brand.500', boxShadow: `0 0 0 1px ${T.primaryGlow}` }}
                             />
                         </FormControl>
@@ -347,45 +385,6 @@ function Settings() {
 
                         <Divider borderColor="surface.border" />
 
-                        {/* Color Palette */}
-                        <Box>
-                            <Text color="gray.400" fontSize="sm" mb={2} fontWeight="500">Color Palette</Text>
-                            <SimpleGrid columns={3} spacing={3}>
-                                {['primary', 'secondary', 'accent'].map((key) => (
-                                    <VStack key={key} spacing={1}>
-                                        <Text fontSize="2xs" color="gray.500" textTransform="capitalize">{key}</Text>
-                                        <Box position="relative" w="100%">
-                                            <Box w="100%" h="36px" rounded="lg"
-                                                bg={dna.colorPalette?.[key] || '#333'}
-                                                border="2px solid" borderColor="rgba(255,255,255,0.15)"
-                                                cursor="pointer"
-                                                onClick={() => document.getElementById(`settings-color-${key}`)?.click()}
-                                                _hover={{ borderColor: T.primary }}
-                                                transition="all 0.2s"
-                                            />
-                                            <input id={`settings-color-${key}`} type="color"
-                                                value={dna.colorPalette?.[key] || '#333333'}
-                                                onChange={(e) => updateDnaColor(key, e.target.value)}
-                                                style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }} />
-                                        </Box>
-                                        <Text fontSize="2xs" color="gray.600" fontFamily="mono">
-                                            {dna.colorPalette?.[key]}
-                                        </Text>
-                                    </VStack>
-                                ))}
-                            </SimpleGrid>
-                            <HStack mt={2} spacing={1}>
-                                {PRESET_COLORS.map((c) => (
-                                    <Box key={c} w="20px" h="20px" rounded="sm" bg={c} cursor="pointer"
-                                        border="2px solid" borderColor={dna.colorPalette?.primary === c ? 'white' : 'transparent'}
-                                        _hover={{ transform: 'scale(1.2)' }} transition="all 0.15s"
-                                        onClick={() => updateDnaColor('primary', c)} />
-                                ))}
-                            </HStack>
-                        </Box>
-
-                        <Divider borderColor="surface.border" />
-
                         {/* Typography */}
                         <Box>
                             <Text color="gray.400" fontSize="sm" mb={2} fontWeight="500">Typography</Text>
@@ -455,6 +454,27 @@ function Settings() {
                                 </Button>
                             )}
                         </Box>
+
+                        <Divider borderColor="surface.border" />
+
+                        {/* Save Brand DNA Button */}
+                        <Button
+                            leftIcon={<FiSave />}
+                            bg={T.primary}
+                            color="white"
+                            size="lg"
+                            w="100%"
+                            _hover={{ bg: T.primaryHover, transform: 'translateY(-1px)', boxShadow: `0 0 25px ${T.primaryGlow}` }}
+                            _active={{ transform: 'translateY(0)' }}
+                            isLoading={savingDna}
+                            loadingText="Saving..."
+                            onClick={handleSaveBrandDNA}
+                            boxShadow={`0 0 15px ${T.primaryGlow}`}
+                            fontWeight="700"
+                            rounded="xl"
+                        >
+                            Save Brand DNA
+                        </Button>
                     </SettingsSection>
 
                     {/* ═══ Profile Section ═══ */}
@@ -505,14 +525,17 @@ function Settings() {
                     {/* Preferences */}
                     <SettingsSection title="Preferences" icon={FiGlobe} delay={0.3}>
                         <SettingsRow label="Theme" description="Choose your color scheme">
-                            <Select value={settings.preferences.theme}
-                                onChange={(e) => setSettings({
-                                    ...settings, preferences: { ...settings.preferences, theme: e.target.value }
-                                })}
+                            <Select value={colorMode}
+                                onChange={(e) => {
+                                    const newMode = e.target.value;
+                                    setColorMode(newMode);
+                                    setSettings({
+                                        ...settings, preferences: { ...settings.preferences, theme: newMode }
+                                    });
+                                }}
                                 w="150px" bg="surface.bg" border="1px solid" borderColor="surface.border">
                                 <option value="dark">Dark</option>
                                 <option value="light">Light</option>
-                                <option value="system">System</option>
                             </Select>
                         </SettingsRow>
                         <Divider borderColor="surface.border" />
