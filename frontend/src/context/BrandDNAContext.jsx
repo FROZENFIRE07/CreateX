@@ -12,14 +12,10 @@ const STORAGE_KEY = 'saco_brand_dna';
 const DEFAULT_BRAND_DNA = {
     brandName: '',
     mission: '',
+    vision: '',
     toneOfVoice: [],
     targetAudience: '',
     coreValues: [],
-    colorPalette: {
-        primary: '#FF6B01',
-        secondary: '#1A1A1A',
-        accent: '#A78BFA',
-    },
     typography: {
         headingFont: 'Inter',
         bodyFont: 'Inter',
