@@ -124,7 +124,7 @@ const MessageBubble = ({ message, index }) => {
                         p={1.5}
                         flexShrink={0}
                     >
-                        <Box as={getIcon()} color="white" size={12} />
+                        <Box as={getIcon()} color="app.text" size={12} />
                     </Box>
                 )}
                 <Box
@@ -273,12 +273,12 @@ const ManagerPanel = ({ contentId, onVariantsUpdated }) => {
                         bg="brand.500"
                         borderRadius="lg"
                         p={2}
-                        boxShadow="0 0 15px rgba(99, 102, 241, 0.3)"
+                        boxShadow="0 0 15px rgba(255, 107, 1, 0.3)"
                     >
                         <FiCpu color="white" size={18} />
                     </Box>
                     <VStack align="start" spacing={0}>
-                        <Heading size="sm" color="white">Manager Agent</Heading>
+                        <Heading size="sm" color="app.text">Manager Agent</Heading>
                         <Text fontSize="xs" color="gray.500">AI-powered assistant</Text>
                     </VStack>
                 </HStack>
@@ -303,11 +303,11 @@ const ManagerPanel = ({ contentId, onVariantsUpdated }) => {
                 {messages.length === 0 ? (
                     <VStack py={6} px={4} spacing={3}>
                         <Box
-                            bg="rgba(99, 102, 241, 0.1)"
+                            bg="rgba(255, 107, 1, 0.1)"
                             borderRadius="full"
                             p={4}
                         >
-                            <FiMessageCircle size={28} color="#6366f1" />
+                            <FiMessageCircle size={28} color="#FF6B01" />
                         </Box>
                         <Text color="gray.400" textAlign="center" fontSize="sm">
                             Hi! I can help you transform and refine your content.
@@ -381,7 +381,7 @@ const ManagerPanel = ({ contentId, onVariantsUpdated }) => {
                             borderColor="surface.border"
                             resize="none"
                             _hover={{ borderColor: 'surface.borderHover' }}
-                            _focus={{ borderColor: 'brand.500', boxShadow: '0 0 0 1px #6366f1' }}
+                            _focus={{ borderColor: 'brand.500', boxShadow: '0 0 0 1px #FF6B01' }}
                             _disabled={{ opacity: 0.5, cursor: 'not-allowed' }}
                         />
                         <IconButton

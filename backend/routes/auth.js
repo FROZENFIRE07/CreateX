@@ -146,6 +146,37 @@ router.get('/profile', authMiddleware, async (req, res) => {
 });
 
 /**
+ * PUT /api/auth/profile
+ * Update current user profile
+ */
+router.put('/profile', authMiddleware, async (req, res) => {
+    try {
+        const { username } = req.body;
+
+        if (!username || username.trim().length < 3) {
+            return res.status(400).json({ error: 'Username must be at least 3 characters' });
+        }
+
+        // Check if username is taken by another user
+        const existing = await User.findOne({ username: username.trim(), _id: { $ne: req.userId } });
+        if (existing) {
+            return res.status(400).json({ error: 'Username already taken' });
+        }
+
+        const user = await User.findByIdAndUpdate(
+            req.userId,
+            { username: username.trim() },
+            { new: true, runValidators: true }
+        ).select('-password');
+
+        res.json({ message: 'Profile updated', user });
+    } catch (error) {
+        console.error('Profile update error:', error);
+        res.status(500).json({ error: 'Failed to update profile' });
+    }
+});
+
+/**
  * GET /api/auth/stats
  * Get user KPIs/stats for dashboard
  */
@@ -187,4 +218,28 @@ router.get('/stats', authMiddleware, async (req, res) => {
     }
 });
 
+/**
+ * DELETE /api/auth/account
+ * Delete current user account and all associated data
+ */
+router.delete('/account', authMiddleware, async (req, res) => {
+    try {
+        const Content = require('../models/Content');
+        const BrandDNA = require('../models/BrandDNA');
+
+        // Delete user's content, brand DNA, and account
+        await Promise.all([
+            Content.deleteMany({ userId: req.userId }),
+            BrandDNA.deleteMany({ userId: req.userId }),
+            User.findByIdAndDelete(req.userId),
+        ]);
+
+        res.json({ message: 'Account deleted successfully' });
+    } catch (error) {
+        console.error('Account deletion error:', error);
+        res.status(500).json({ error: 'Failed to delete account' });
+    }
+});
+
 module.exports = router;
+

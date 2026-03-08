@@ -93,7 +93,7 @@ const AnimatedBackground = () => (
             width="600px"
             height="600px"
             borderRadius="full"
-            bg="radial-gradient(circle, rgba(99, 102, 241, 0.3) 0%, transparent 70%)"
+            bg="radial-gradient(circle, rgba(255, 107, 1, 0.3) 0%, transparent 70%)"
             top="-200px"
             left="-100px"
             animate={{
@@ -111,7 +111,7 @@ const AnimatedBackground = () => (
             width="500px"
             height="500px"
             borderRadius="full"
-            bg="radial-gradient(circle, rgba(139, 92, 246, 0.25) 0%, transparent 70%)"
+            bg="radial-gradient(circle, rgba(245, 158, 11, 0.25) 0%, transparent 70%)"
             bottom="-150px"
             right="-100px"
             animate={{
@@ -204,7 +204,7 @@ function Login() {
                                 >
                                     <FiZap size={24} color="white" />
                                 </Box>
-                                <Heading size="lg" color="white">SACO</Heading>
+                                <Heading size="lg" color="white">OrchAI</Heading>
                             </HStack>
                         </MotionBox>
 
@@ -287,7 +287,7 @@ function Login() {
                             >
                                 <FiZap size={24} color="white" />
                             </Box>
-                            <Heading size="lg" color="white">SACO</Heading>
+                            <Heading size="lg" color="white">OrchAI</Heading>
                         </HStack>
                     )}
 

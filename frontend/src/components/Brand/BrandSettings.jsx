@@ -44,6 +44,7 @@ import {
 import { HexColorPicker } from 'react-colorful';
 import api from '../../services/api';
 import { showToast } from '../common';
+import { useBrandDNA } from '../../context/BrandDNAContext';
 
 const MotionBox = motion(Box);
 
@@ -116,7 +117,7 @@ const ToneCard = ({ tone, selected, onClick }) => (
         as="button"
         type="button"
         onClick={onClick}
-        bg={selected ? 'rgba(99, 102, 241, 0.15)' : 'surface.bg'}
+        bg={selected ? 'rgba(255, 107, 1, 0.15)' : 'surface.bg'}
         border="2px solid"
         borderColor={selected ? 'brand.500' : 'surface.border'}
         borderRadius="xl"
@@ -129,7 +130,7 @@ const ToneCard = ({ tone, selected, onClick }) => (
         w="full"
     >
         <Text fontSize="2xl" mb={2}>{tone.icon}</Text>
-        <Text fontWeight="600" color="white" fontSize="sm">{tone.label}</Text>
+        <Text fontWeight="600" color="app.text" fontSize="sm">{tone.label}</Text>
         <Text fontSize="xs" color="gray.500">{tone.desc}</Text>
     </MotionBox>
 );
@@ -184,7 +185,7 @@ const TagInput = ({ value, onChange, placeholder }) => {
                 border="1px solid"
                 borderColor="surface.border"
                 _hover={{ borderColor: 'surface.borderHover' }}
-                _focus={{ borderColor: 'brand.500', boxShadow: '0 0 0 1px #6366f1' }}
+                _focus={{ borderColor: 'brand.500', boxShadow: '0 0 0 1px #FF6B01' }}
             />
             <Text fontSize="xs" color="gray.600" mt={1}>Press Enter or comma to add</Text>
         </Box>
@@ -192,10 +193,11 @@ const TagInput = ({ value, onChange, placeholder }) => {
 };
 
 function BrandSettings() {
+    const { setBrandDNA } = useBrandDNA();
     const [currentStep, setCurrentStep] = useState(1);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [brandColor, setBrandColor] = useState('#6366f1');
+    const [brandColor, setBrandColor] = useState('#FF6B01');
     const [showColorPicker, setShowColorPicker] = useState(false);
 
     const [form, setForm] = useState({
@@ -227,6 +229,13 @@ function BrandSettings() {
                     targetAudience: b.guidelines?.targetAudience || ''
                 });
                 if (b.brandColor) setBrandColor(b.brandColor);
+                // Sync context so Navbar stays up-to-date
+                setBrandDNA({
+                    brandName: b.name || '',
+                    toneOfVoice: [b.guidelines?.tone || 'professional'],
+                    coreValues: b.guidelines?.values || [],
+                    targetAudience: b.guidelines?.targetAudience || '',
+                });
             }
         } catch (err) {
             console.error('Brand fetch error:', err);
@@ -253,6 +262,13 @@ function BrandSettings() {
             };
 
             await api.post('/brand', payload);
+            // Sync context + localStorage so Navbar updates immediately
+            setBrandDNA({
+                brandName: form.name,
+                toneOfVoice: [form.tone],
+                coreValues: payload.guidelines.values,
+                targetAudience: form.targetAudience,
+            });
             showToast.success('Brand DNA saved successfully!');
             fetchBrandDNA();
         } catch (err) {
@@ -295,7 +311,7 @@ function BrandSettings() {
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
             >
-                <Heading size="lg" color="white">Brand DNA</Heading>
+                <Heading size="lg" color="app.text">Brand DNA</Heading>
                 <Text color="gray.400" mt={1}>Define your brand voice for consistent content generation</Text>
             </MotionBox>
 
@@ -325,7 +341,7 @@ function BrandSettings() {
                                 >
                                     <VStack spacing={6} align="stretch">
                                         <Box>
-                                            <Text fontWeight="500" color="gray.300" fontSize="sm" mb={2}>Brand Name *</Text>
+                                            <Text fontWeight="500" color="app.textSecondary" fontSize="sm" mb={2}>Brand Name *</Text>
                                             <Input
                                                 value={form.name}
                                                 onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -335,12 +351,12 @@ function BrandSettings() {
                                                 border="1px solid"
                                                 borderColor="surface.border"
                                                 _hover={{ borderColor: 'surface.borderHover' }}
-                                                _focus={{ borderColor: 'brand.500', boxShadow: '0 0 0 1px #6366f1' }}
+                                                _focus={{ borderColor: 'brand.500', boxShadow: '0 0 0 1px #FF6B01' }}
                                             />
                                         </Box>
 
                                         <Box>
-                                            <Text fontWeight="500" color="gray.300" fontSize="sm" mb={2}>Brand Color</Text>
+                                            <Text fontWeight="500" color="app.textSecondary" fontSize="sm" mb={2}>Brand Color</Text>
                                             <HStack spacing={4}>
                                                 <Box
                                                     as="button"
@@ -382,7 +398,7 @@ function BrandSettings() {
                                 >
                                     <VStack spacing={6} align="stretch">
                                         <Box>
-                                            <Text fontWeight="500" color="gray.300" fontSize="sm" mb={3}>Tone of Voice</Text>
+                                            <Text fontWeight="500" color="app.textSecondary" fontSize="sm" mb={3}>Tone of Voice</Text>
                                             <SimpleGrid columns={{ base: 2, md: 3 }} spacing={3}>
                                                 {TONE_OPTIONS.map(tone => (
                                                     <ToneCard
@@ -396,7 +412,7 @@ function BrandSettings() {
                                         </Box>
 
                                         <Box>
-                                            <Text fontWeight="500" color="gray.300" fontSize="sm" mb={2}>Brand Voice Statement</Text>
+                                            <Text fontWeight="500" color="app.textSecondary" fontSize="sm" mb={2}>Brand Voice Statement</Text>
                                             <Textarea
                                                 value={form.voice}
                                                 onChange={(e) => setForm({ ...form, voice: e.target.value })}
@@ -406,7 +422,7 @@ function BrandSettings() {
                                                 border="1px solid"
                                                 borderColor="surface.border"
                                                 _hover={{ borderColor: 'surface.borderHover' }}
-                                                _focus={{ borderColor: 'brand.500', boxShadow: '0 0 0 1px #6366f1' }}
+                                                _focus={{ borderColor: 'brand.500', boxShadow: '0 0 0 1px #FF6B01' }}
                                             />
                                         </Box>
                                     </VStack>
@@ -422,7 +438,7 @@ function BrandSettings() {
                                 >
                                     <VStack spacing={6} align="stretch">
                                         <Box>
-                                            <Text fontWeight="500" color="gray.300" fontSize="sm" mb={2}>Core Values</Text>
+                                            <Text fontWeight="500" color="app.textSecondary" fontSize="sm" mb={2}>Core Values</Text>
                                             <TagInput
                                                 value={form.values}
                                                 onChange={(val) => setForm({ ...form, values: val })}
@@ -431,7 +447,7 @@ function BrandSettings() {
                                         </Box>
 
                                         <Box>
-                                            <Text fontWeight="500" color="gray.300" fontSize="sm" mb={2}>Must-Use Keywords</Text>
+                                            <Text fontWeight="500" color="app.textSecondary" fontSize="sm" mb={2}>Must-Use Keywords</Text>
                                             <TagInput
                                                 value={form.keywords}
                                                 onChange={(val) => setForm({ ...form, keywords: val })}
@@ -440,7 +456,7 @@ function BrandSettings() {
                                         </Box>
 
                                         <Box>
-                                            <Text fontWeight="500" color="gray.300" fontSize="sm" mb={2}>Words to Avoid</Text>
+                                            <Text fontWeight="500" color="app.textSecondary" fontSize="sm" mb={2}>Words to Avoid</Text>
                                             <TagInput
                                                 value={form.avoidWords}
                                                 onChange={(val) => setForm({ ...form, avoidWords: val })}
@@ -460,7 +476,7 @@ function BrandSettings() {
                                 >
                                     <VStack spacing={6} align="stretch">
                                         <Box>
-                                            <Text fontWeight="500" color="gray.300" fontSize="sm" mb={2}>Target Audience</Text>
+                                            <Text fontWeight="500" color="app.textSecondary" fontSize="sm" mb={2}>Target Audience</Text>
                                             <Textarea
                                                 value={form.targetAudience}
                                                 onChange={(e) => setForm({ ...form, targetAudience: e.target.value })}
@@ -470,13 +486,13 @@ function BrandSettings() {
                                                 border="1px solid"
                                                 borderColor="surface.border"
                                                 _hover={{ borderColor: 'surface.borderHover' }}
-                                                _focus={{ borderColor: 'brand.500', boxShadow: '0 0 0 1px #6366f1' }}
+                                                _focus={{ borderColor: 'brand.500', boxShadow: '0 0 0 1px #FF6B01' }}
                                             />
                                         </Box>
 
                                         {/* Summary Preview */}
                                         <Box
-                                            bg="rgba(99, 102, 241, 0.1)"
+                                            bg="rgba(255, 107, 1, 0.1)"
                                             border="1px solid"
                                             borderColor="brand.500"
                                             borderRadius="lg"
@@ -484,12 +500,12 @@ function BrandSettings() {
                                         >
                                             <HStack mb={3}>
                                                 <Icon as={FiCheckCircle} color="brand.400" />
-                                                <Text fontWeight="600" color="white">Ready to Save</Text>
+                                                <Text fontWeight="600" color="app.text">Ready to Save</Text>
                                             </HStack>
                                             <SimpleGrid columns={2} spacing={3} fontSize="sm">
                                                 <Box>
                                                     <Text color="gray.500">Brand</Text>
-                                                    <Text color="white">{form.name || 'Not set'}</Text>
+                                                    <Text color="app.text">{form.name || 'Not set'}</Text>
                                                 </Box>
                                                 <Box>
                                                     <Text color="gray.500">Tone</Text>
@@ -497,11 +513,11 @@ function BrandSettings() {
                                                 </Box>
                                                 <Box>
                                                     <Text color="gray.500">Values</Text>
-                                                    <Text color="white" noOfLines={1}>{form.values || 'None'}</Text>
+                                                    <Text color="app.text" noOfLines={1}>{form.values || 'None'}</Text>
                                                 </Box>
                                                 <Box>
                                                     <Text color="gray.500">Keywords</Text>
-                                                    <Text color="white" noOfLines={1}>{form.keywords || 'None'}</Text>
+                                                    <Text color="app.text" noOfLines={1}>{form.keywords || 'None'}</Text>
                                                 </Box>
                                             </SimpleGrid>
                                         </Box>
@@ -565,14 +581,14 @@ function BrandSettings() {
                         overflow="hidden"
                     >
                         <Box p={4} borderBottom="1px solid" borderColor="surface.border" bg="surface.bg">
-                            <Heading size="sm" color="white">Live Preview</Heading>
+                            <Heading size="sm" color="app.text">Live Preview</Heading>
                         </Box>
                         <VStack p={4} spacing={4} align="stretch">
                             <Box>
                                 <Text fontSize="xs" color="gray.500" mb={1}>BRAND</Text>
                                 <HStack>
                                     <Box w={4} h={4} borderRadius="sm" bg={brandColor} />
-                                    <Text fontWeight="600" color="white">{form.name || 'Not set'}</Text>
+                                    <Text fontWeight="600" color="app.text">{form.name || 'Not set'}</Text>
                                 </HStack>
                             </Box>
                             <Box>
@@ -581,11 +597,11 @@ function BrandSettings() {
                             </Box>
                             <Box>
                                 <Text fontSize="xs" color="gray.500" mb={1}>VALUES</Text>
-                                <Text fontSize="sm" color="gray.300">{form.values || 'None defined'}</Text>
+                                <Text fontSize="sm" color="app.textSecondary">{form.values || 'None defined'}</Text>
                             </Box>
                             <Box>
                                 <Text fontSize="xs" color="gray.500" mb={1}>AUDIENCE</Text>
-                                <Text fontSize="sm" color="gray.300" noOfLines={2}>{form.targetAudience || 'Not specified'}</Text>
+                                <Text fontSize="sm" color="app.textSecondary" noOfLines={2}>{form.targetAudience || 'Not specified'}</Text>
                             </Box>
                         </VStack>
                     </MotionBox>
@@ -603,7 +619,7 @@ function BrandSettings() {
                     >
                         <HStack mb={3}>
                             <Icon as={FiZap} color="brand.400" />
-                            <Text fontWeight="600" color="white">Why Brand DNA?</Text>
+                            <Text fontWeight="600" color="app.text">Why Brand DNA?</Text>
                         </HStack>
                         <Text fontSize="sm" color="gray.400" lineHeight="1.6" mb={4}>
                             Brand DNA ensures consistency across all generated content.
@@ -613,7 +629,7 @@ function BrandSettings() {
                             {['Consistent tone', 'Brand keywords', 'Audience alignment'].map((item, idx) => (
                                 <HStack key={idx} spacing={2}>
                                     <Icon as={FiCheck} color="success.400" boxSize={4} />
-                                    <Text fontSize="sm" color="gray.300">{item}</Text>
+                                    <Text fontSize="sm" color="app.textSecondary">{item}</Text>
                                 </HStack>
                             ))}
                         </VStack>

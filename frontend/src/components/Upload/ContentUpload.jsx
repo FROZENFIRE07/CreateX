@@ -73,7 +73,7 @@ const PlatformCard = ({ platform, selected, onToggle, disabled }) => (
         type="button"
         onClick={() => !disabled && onToggle(platform.id)}
         disabled={disabled}
-        bg={selected ? 'rgba(99, 102, 241, 0.15)' : 'surface.card'}
+        bg={selected ? 'rgba(255, 107, 1, 0.15)' : 'surface.card'}
         border="2px solid"
         borderColor={selected ? 'brand.500' : 'surface.border'}
         borderRadius="xl"
@@ -93,10 +93,10 @@ const PlatformCard = ({ platform, selected, onToggle, disabled }) => (
                 p={2}
                 transition="all 0.2s"
             >
-                <Icon as={platform.icon} color="white" boxSize={5} />
+                <Icon as={platform.icon} color="app.text" boxSize={5} />
             </Box>
             <VStack align="start" spacing={0} flex={1}>
-                <Text fontWeight="600" fontSize="sm" color="white">{platform.name}</Text>
+                <Text fontWeight="600" fontSize="sm" color="app.text">{platform.name}</Text>
                 <Text fontSize="xs" color="gray.500">{platform.desc}</Text>
             </VStack>
             {selected && (
@@ -160,6 +160,8 @@ const LogMessage = ({ message, index }) => (
 function ContentUpload() {
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
+    const [titleManuallyEdited, setTitleManuallyEdited] = useState(false);
+    const [generatingTitle, setGeneratingTitle] = useState(false);
     const [selectedPlatforms, setSelectedPlatforms] = useState(['twitter', 'linkedin', 'email']);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -173,8 +175,40 @@ function ContentUpload() {
     const [showConfetti, setShowConfetti] = useState(false);
 
     const logsEndRef = useRef(null);
+    const titleGenTimeout = useRef(null);
+    const abortControllerRef = useRef(null);
     const navigate = useNavigate();
     const isMobile = useBreakpointValue({ base: true, md: false });
+
+    // Auto-generate title when content changes (debounced)
+    useEffect(() => {
+        if (titleManuallyEdited || content.length < 50) return;
+
+        if (titleGenTimeout.current) clearTimeout(titleGenTimeout.current);
+        if (abortControllerRef.current) abortControllerRef.current.abort();
+
+        titleGenTimeout.current = setTimeout(async () => {
+            const controller = new AbortController();
+            abortControllerRef.current = controller;
+            setGeneratingTitle(true);
+            try {
+                const res = await api.post('/content/generate-title', { content }, { signal: controller.signal });
+                if (!controller.signal.aborted && res.data.title) {
+                    setTitle(res.data.title);
+                }
+            } catch (err) {
+                if (err.name !== 'AbortError' && err.code !== 'ERR_CANCELED') {
+                    console.error('Title generation failed:', err);
+                }
+            } finally {
+                if (!controller.signal.aborted) setGeneratingTitle(false);
+            }
+        }, 800);
+
+        return () => {
+            if (titleGenTimeout.current) clearTimeout(titleGenTimeout.current);
+        };
+    }, [content, titleManuallyEdited]);
 
     // Dropzone configuration
     const onDrop = useCallback((acceptedFiles) => {
@@ -183,14 +217,12 @@ function ContentUpload() {
             const reader = new FileReader();
             reader.onload = (e) => {
                 setContent(e.target.result);
-                if (!title) {
-                    setTitle(file.name.replace(/\.[^/.]+$/, ''));
-                }
+                setTitleManuallyEdited(false);
                 showToast.success(`File "${file.name}" loaded successfully`);
             };
             reader.readAsText(file);
         }
-    }, [title]);
+    }, []);
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         onDrop,
@@ -363,7 +395,7 @@ function ContentUpload() {
                     recycle={false}
                     numberOfPieces={500}
                     gravity={0.3}
-                    colors={['#6366f1', '#8b5cf6', '#a855f7', '#22c55e', '#14b8a6']}
+                    colors={['#FF6B01', '#f59e0b', '#a855f7', '#22c55e', '#14b8a6']}
                 />
             )}
             <VStack spacing={6} align="stretch">
@@ -372,7 +404,7 @@ function ContentUpload() {
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                 >
-                    <Heading size="lg" color="white">Upload Content</Heading>
+                    <Heading size="lg" color="app.text">Upload Content</Heading>
                     <Text color="gray.400" mt={1}>Transform your content for multiple platforms with AI</Text>
                 </MotionBox>
 
@@ -418,7 +450,7 @@ function ContentUpload() {
                         >
                             <Box
                                 {...getRootProps()}
-                                bg={isDragActive ? 'rgba(99, 102, 241, 0.1)' : 'surface.card'}
+                                bg={isDragActive ? 'rgba(255, 107, 1, 0.1)' : 'surface.card'}
                                 border="2px dashed"
                                 borderColor={isDragActive ? 'brand.500' : 'surface.border'}
                                 borderRadius="xl"
@@ -426,11 +458,11 @@ function ContentUpload() {
                                 textAlign="center"
                                 cursor={orchestrating ? 'not-allowed' : 'pointer'}
                                 transition="all 0.2s"
-                                _hover={!orchestrating ? { borderColor: 'brand.400', bg: 'rgba(99, 102, 241, 0.05)' } : {}}
+                                _hover={!orchestrating ? { borderColor: 'brand.400', bg: 'rgba(255, 107, 1, 0.05)' } : {}}
                             >
                                 <input {...getInputProps()} />
                                 <Icon as={FiUploadCloud} boxSize={12} color={isDragActive ? 'brand.400' : 'gray.500'} mb={4} />
-                                <Text fontWeight="600" color="white" mb={1}>
+                                <Text fontWeight="600" color="app.text" mb={1}>
                                     {isDragActive ? 'Drop your file here' : 'Drag & drop a file here'}
                                 </Text>
                                 <Text fontSize="sm" color="gray.500">
@@ -454,19 +486,29 @@ function ContentUpload() {
                                 <VStack spacing={5} align="stretch">
                                     {/* Title */}
                                     <Box>
-                                        <Text fontWeight="500" color="gray.300" fontSize="sm" mb={2}>Content Title</Text>
+                                        <HStack justify="space-between" mb={2}>
+                                            <Text fontWeight="500" color="gray.300" fontSize="sm">Content Title</Text>
+                                            {generatingTitle && (
+                                                <HStack spacing={1}>
+                                                    <Box as="span" w="6px" h="6px" borderRadius="full" bg="brand.400" className="title-pulse" />
+                                                    <Text fontSize="xs" color="brand.400">Generating title...</Text>
+                                                </HStack>
+                                            )}
+                                        </HStack>
                                         <Input
                                             value={title}
-                                            onChange={(e) => setTitle(e.target.value)}
-                                            placeholder="e.g., Product Launch Announcement"
-                                            required
+                                            onChange={(e) => {
+                                                setTitle(e.target.value);
+                                                setTitleManuallyEdited(true);
+                                            }}
+                                            placeholder={generatingTitle ? 'AI is generating a title...' : 'Auto-generated from content (or type your own)'}
                                             maxLength={200}
                                             disabled={orchestrating}
                                             bg="surface.bg"
                                             border="1px solid"
-                                            borderColor="surface.border"
+                                            borderColor={generatingTitle ? 'brand.500' : 'surface.border'}
                                             _hover={{ borderColor: 'surface.borderHover' }}
-                                            _focus={{ borderColor: 'brand.500', boxShadow: '0 0 0 1px #6366f1' }}
+                                            _focus={{ borderColor: 'brand.500', boxShadow: '0 0 0 1px #FF6B01' }}
                                         />
                                     </Box>
 
@@ -487,7 +529,7 @@ function ContentUpload() {
                                             border="1px solid"
                                             borderColor="surface.border"
                                             _hover={{ borderColor: 'surface.borderHover' }}
-                                            _focus={{ borderColor: 'brand.500', boxShadow: '0 0 0 1px #6366f1' }}
+                                            _focus={{ borderColor: 'brand.500', boxShadow: '0 0 0 1px #FF6B01' }}
                                         />
                                     </Box>
 
@@ -550,7 +592,7 @@ function ContentUpload() {
                             top="80px"
                         >
                             <HStack justify="space-between" p={4} borderBottom="1px solid" borderColor="surface.border">
-                                <Heading size="sm" color="white">Workflow Log</Heading>
+                                <Heading size="sm" color="app.text">Workflow Log</Heading>
                                 {orchestrating && status !== 'completed' && (
                                     <Badge colorScheme="purple" variant="subtle">
                                         Processing...
@@ -584,11 +626,11 @@ function ContentUpload() {
                                         <Text fontSize="xs" color="gray.500">Hit Rate</Text>
                                     </VStack>
                                     <VStack spacing={0}>
-                                        <Text fontSize="xl" fontWeight="700" color="white">{kpis.publishedCount}</Text>
+                                        <Text fontSize="xl" fontWeight="700" color="app.text">{kpis.publishedCount}</Text>
                                         <Text fontSize="xs" color="gray.500">Published</Text>
                                     </VStack>
                                     <VStack spacing={0}>
-                                        <Text fontSize="xl" fontWeight="700" color="white">{kpis.processingTime}s</Text>
+                                        <Text fontSize="xl" fontWeight="700" color="app.text">{kpis.processingTime}s</Text>
                                         <Text fontSize="xs" color="gray.500">Time</Text>
                                     </VStack>
                                 </SimpleGrid>
@@ -607,7 +649,7 @@ function ContentUpload() {
                                 overflow="hidden"
                             >
                                 <HStack justify="space-between" p={4} borderBottom="1px solid" borderColor="surface.border">
-                                    <Heading size="sm" color="white">Generated Variants</Heading>
+                                    <Heading size="sm" color="app.text">Generated Variants</Heading>
                                     <Button
                                         size="sm"
                                         bg="brand.500"
@@ -634,7 +676,7 @@ function ContentUpload() {
                                             >
                                                 <HStack mb={2}>
                                                     <Icon as={platform?.icon || FiFileText} color={platform?.color} />
-                                                    <Text fontWeight="600" color="white" textTransform="capitalize">
+                                                    <Text fontWeight="600" color="app.text" textTransform="capitalize">
                                                         {variant.platform}
                                                     </Text>
                                                     <Badge colorScheme="green" ml="auto">{variant.consistencyScore}%</Badge>

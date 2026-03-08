@@ -7,6 +7,17 @@ node_modules/
 .env
 .env.local
 .env.*.local
+AWS_BHARAT_PRESENTATION_CONTENT.md
+design.md
+final project 01.pdf
+HACKATHON_PROJECT_DESCRIPTION.md
+Idea Submission _ AWS AI for Bharat Hackathon.pptx
+OrchAI_backend.pem
+PROJECT_SHOWCASE.md
+requirements.md
+uploads/
+.kiro/
+
 
 # Build outputs
 dist/

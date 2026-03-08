@@ -1,5 +1,5 @@
 /**
- * SACO Frontend Entry Point
+ * OrchAI Frontend Entry Point
  * Wrapped with Chakra UI, React Query, and Toast providers
  */
 

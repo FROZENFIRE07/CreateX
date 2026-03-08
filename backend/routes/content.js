@@ -138,6 +138,127 @@ router.get('/:id/stream', async (req, res) => {
 router.use(authMiddleware);
 
 /**
+ * GET /api/content/stats/platforms
+ * Aggregate variant counts per platform for the current user
+ * Used by SacoDashboard to show real content counts per platform
+ */
+router.get('/stats/platforms', async (req, res) => {
+    try {
+        const result = await Content.aggregate([
+            { $match: { userId: new (require('mongoose').Types.ObjectId)(req.userId) } },
+            { $unwind: '$variants' },
+            {
+                $group: {
+                    _id: '$variants.platform',
+                    variants: { $sum: 1 }
+                }
+            }
+        ]);
+
+        // Build response with all platforms (default 0)
+        // Include both 'blog' (DB enum) and 'blogs' (frontend alias)
+        const platforms = { instagram: 0, twitter: 0, linkedin: 0, email: 0, blog: 0 };
+        result.forEach(item => {
+            if (platforms.hasOwnProperty(item._id)) {
+                platforms[item._id] = item.variants;
+            }
+        });
+        // Alias: frontend uses 'blogs' (plural)
+        platforms.blogs = platforms.blog;
+
+        res.json({ platforms });
+    } catch (error) {
+        console.error('Platform stats error:', error);
+        res.status(500).json({ error: 'Failed to fetch platform stats' });
+    }
+});
+
+/**
+ * GET /api/content/variants/:platform
+ * Return flattened variants for a specific platform across all user's content
+ * Used by PlatformLibrary to display generated content per platform
+ */
+router.get('/variants/:platform', async (req, res) => {
+    try {
+        let { platform } = req.params;
+        // Normalize: frontend 'blogs' → DB 'blog'
+        if (platform === 'blogs') platform = 'blog';
+
+        const validPlatforms = ['twitter', 'linkedin', 'email', 'instagram', 'blog'];
+        if (!validPlatforms.includes(platform)) {
+            return res.status(400).json({ error: 'Invalid platform' });
+        }
+
+        const results = await Content.aggregate([
+            { $match: { userId: new (require('mongoose').Types.ObjectId)(req.userId) } },
+            { $unwind: '$variants' },
+            { $match: { 'variants.platform': platform } },
+            { $sort: { 'variants.generatedAt': -1 } },
+            {
+                $project: {
+                    _id: 0,
+                    variantId: '$variants._id',
+                    contentId: '$_id',
+                    sourceTitle: '$title',
+                    title: '$title',
+                    content: '$variants.content',
+                    platform: '$variants.platform',
+                    status: '$variants.status',
+                    consistencyScore: '$variants.consistencyScore',
+                    metadata: '$variants.metadata',
+                    image: '$variants.image',
+                    createdAt: '$variants.generatedAt',
+                }
+            }
+        ]);
+
+        res.json({ items: results });
+    } catch (error) {
+        console.error('Platform variants error:', error);
+        res.status(500).json({ error: 'Failed to fetch platform variants' });
+    }
+});
+
+/**
+ * POST /api/content/generate-title
+ * Auto-generate a title from content using AI
+ */
+router.post('/generate-title', async (req, res) => {
+    try {
+        const { content } = req.body;
+        if (!content || content.length < 20) {
+            return res.status(400).json({ error: 'Content must be at least 20 characters' });
+        }
+
+        const { ChatGroq } = require('@langchain/groq');
+        const llm = new ChatGroq({
+            apiKey: process.env.GROQ_API_KEY,
+            modelName: 'llama-3.3-70b-versatile',
+            temperature: 0.3,
+            maxTokens: 60,
+        });
+
+        const snippet = content.substring(0, 1500);
+        const response = await llm.invoke([
+            {
+                role: 'system',
+                content: 'You are a title generator. Given content, produce a single short, catchy title (max 10 words). Output ONLY the title text, nothing else. No quotes, no prefixes, no explanation.'
+            },
+            {
+                role: 'user',
+                content: snippet
+            }
+        ]);
+
+        const title = response.content.trim().replace(/^["']|["']$/g, '');
+        res.json({ title });
+    } catch (error) {
+        console.error('Title generation error:', error);
+        res.status(500).json({ error: 'Failed to generate title' });
+    }
+});
+
+/**
  * POST /api/content
  * Create new content
  */
@@ -145,8 +266,8 @@ router.post('/', async (req, res) => {
     try {
         const { title, data, type = 'text' } = req.body;
 
-        if (!title || !data) {
-            return res.status(400).json({ error: 'Title and content data are required' });
+        if (!data) {
+            return res.status(400).json({ error: 'Content data is required' });
         }
 
         // Validate content
@@ -157,7 +278,7 @@ router.post('/', async (req, res) => {
 
         const content = new Content({
             userId: req.userId,
-            title,
+            title: title || data.substring(0, 100).trim(),
             data,
             type,
             orchestrationStatus: 'pending'
@@ -191,10 +312,25 @@ router.post('/', async (req, res) => {
  */
 router.get('/', async (req, res) => {
     try {
-        const { page = 1, limit = 10, status } = req.query;
+        const { page = 1, limit = 10, status, timeRange, platform } = req.query;
 
         const query = { userId: req.userId };
         if (status) query.orchestrationStatus = status;
+
+        // Time range filter
+        if (timeRange) {
+            const now = new Date();
+            const daysMap = { '7d': 7, '30d': 30, '90d': 90, '1y': 365 };
+            const days = daysMap[timeRange];
+            if (days) {
+                query.createdAt = { $gte: new Date(now - days * 24 * 60 * 60 * 1000) };
+            }
+        }
+
+        // Platform filter — match content that has at least one variant for this platform
+        if (platform) {
+            query['variants.platform'] = platform;
+        }
 
         const contents = await Content.find(query)
             .sort({ createdAt: -1 })

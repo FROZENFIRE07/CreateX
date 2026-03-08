@@ -1,35 +1,35 @@
 /**
- * SACO Custom Theme
+ * OrchAI Custom Theme
  * Chakra UI theme with design tokens for the AI content platform
  */
 
 import { extendTheme } from '@chakra-ui/react';
 
-// Brand color scale (primary: #6366f1 - Indigo)
+// Brand color scale (primary: #FF6B01 - Orange)
 const colors = {
     brand: {
-        50: '#eef2ff',
-        100: '#e0e7ff',
-        200: '#c7d2fe',
-        300: '#a5b4fc',
-        400: '#818cf8',
-        500: '#6366f1', // Primary
-        600: '#4f46e5',
-        700: '#4338ca',
-        800: '#3730a3',
-        900: '#312e81',
+        50: '#fff7ed',
+        100: '#ffedd5',
+        200: '#fed7aa',
+        300: '#fdba74',
+        400: '#fb923c',
+        500: '#FF6B01', // Primary — matches dashboard
+        600: '#E85F00',
+        700: '#c2410c',
+        800: '#9a3412',
+        900: '#7c2d12',
     },
     accent: {
-        50: '#faf5ff',
-        100: '#f3e8ff',
-        200: '#e9d5ff',
-        300: '#d8b4fe',
-        400: '#c084fc',
-        500: '#8b5cf6', // Secondary
-        600: '#7c3aed',
-        700: '#6d28d9',
-        800: '#5b21b6',
-        900: '#4c1d95',
+        50: '#fffbeb',
+        100: '#fef3c7',
+        200: '#fde68a',
+        300: '#fcd34d',
+        400: '#fbbf24',
+        500: '#f59e0b', // Secondary — warm amber
+        600: '#d97706',
+        700: '#b45309',
+        800: '#92400e',
+        900: '#78350f',
     },
     success: {
         50: '#ecfdf5',
@@ -62,11 +62,19 @@ const colors = {
     },
     // Dark theme surface colors
     surface: {
-        bg: '#0a0a0f',
-        card: '#12121a',
-        cardHover: '#1a1a24',
+        bg: '#1A1A1A',
+        card: '#353535',
+        cardHover: '#444444',
         border: 'rgba(255, 255, 255, 0.08)',
         borderHover: 'rgba(255, 255, 255, 0.15)',
+    },
+    // Light theme surface colors
+    surfaceLight: {
+        bg: '#F7F7F8',
+        card: '#FFFFFF',
+        cardHover: '#F0F0F0',
+        border: 'rgba(0, 0, 0, 0.08)',
+        borderHover: 'rgba(0, 0, 0, 0.15)',
     },
 };
 
@@ -130,9 +138,9 @@ const shadows = {
     md: '0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3)',
     lg: '0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3)',
     xl: '0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.3)',
-    glow: '0 0 20px rgba(99, 102, 241, 0.3)',
-    glowLg: '0 0 40px rgba(99, 102, 241, 0.4)',
-    glowAccent: '0 0 20px rgba(139, 92, 246, 0.3)',
+    glow: '0 0 20px rgba(255, 107, 1, 0.35)',
+    glowLg: '0 0 40px rgba(255, 107, 1, 0.45)',
+    glowAccent: '0 0 20px rgba(245, 158, 11, 0.3)',
 };
 
 // Component style overrides
@@ -209,7 +217,7 @@ const components = {
                     _focus: {
                         bg: 'whiteAlpha.100',
                         borderColor: 'brand.500',
-                        boxShadow: '0 0 0 1px var(--chakra-colors-brand-500)',
+                        boxShadow: '0 0 0 1px rgba(255, 107, 1, 0.5)',
                     },
                 },
             },
@@ -260,10 +268,10 @@ const components = {
 
 // Global styles
 const styles = {
-    global: {
+    global: (props) => ({
         'html, body': {
-            bg: 'surface.bg',
-            color: 'gray.100',
+            bg: props.colorMode === 'dark' ? 'surface.bg' : '#F7F7F8',
+            color: props.colorMode === 'dark' ? 'gray.100' : 'gray.800',
             lineHeight: 'tall',
         },
         '*::selection': {
@@ -275,23 +283,40 @@ const styles = {
             height: '8px',
         },
         '::-webkit-scrollbar-track': {
-            bg: 'surface.bg',
+            bg: props.colorMode === 'dark' ? 'surface.bg' : '#F0F0F2',
         },
         '::-webkit-scrollbar-thumb': {
-            bg: 'whiteAlpha.200',
+            bg: props.colorMode === 'dark' ? 'whiteAlpha.200' : 'blackAlpha.200',
             borderRadius: 'full',
         },
         '::-webkit-scrollbar-thumb:hover': {
-            bg: 'whiteAlpha.300',
+            bg: props.colorMode === 'dark' ? 'whiteAlpha.300' : 'blackAlpha.300',
         },
-    },
+    }),
 };
 
 // Semantic tokens for dark mode (primarily dark theme)
 const semanticTokens = {
     colors: {
-        'chakra-body-bg': 'surface.bg',
-        'chakra-body-text': 'gray.100',
+        'chakra-body-bg': { _light: '#F7F7F8', _dark: '#1A1A1A' },
+        'chakra-body-text': { _light: 'gray.800', _dark: 'gray.100' },
+        'surface.bg': { _light: '#F7F7F8', _dark: '#1A1A1A' },
+        'surface.card': { _light: '#FFFFFF', _dark: '#353535' },
+        'surface.cardHover': { _light: '#F0F0F0', _dark: '#444444' },
+        'surface.border': { _light: 'rgba(0,0,0,0.08)', _dark: 'rgba(255,255,255,0.08)' },
+        'surface.borderHover': { _light: 'rgba(0,0,0,0.15)', _dark: 'rgba(255,255,255,0.15)' },
+        'app.bg': { _light: '#F7F7F8', _dark: '#1A1A1A' },
+        'app.surface': { _light: '#FFFFFF', _dark: '#353535' },
+        'app.surfaceHover': { _light: '#F0F0F0', _dark: '#444444' },
+        'app.border': { _light: 'rgba(0,0,0,0.08)', _dark: 'rgba(255,255,255,0.08)' },
+        'app.borderHover': { _light: 'rgba(0,0,0,0.15)', _dark: 'rgba(255,255,255,0.15)' },
+        'app.text': { _light: 'gray.800', _dark: 'white' },
+        'app.textSecondary': { _light: 'gray.600', _dark: 'gray.400' },
+        'app.textMuted': { _light: 'gray.500', _dark: 'gray.500' },
+        'app.navBg': { _light: 'rgba(255,255,255,0.85)', _dark: 'rgba(26,26,26,0.85)' },
+        'app.sidenavBg': { _light: 'rgba(255,255,255,0.9)', _dark: 'rgba(53,53,53,0.85)' },
+        'app.cardBg': { _light: 'rgba(255,255,255,0.7)', _dark: 'rgba(53,53,53,0.5)' },
+        'app.inputBg': { _light: '#F0F0F2', _dark: '#1A1A1A' },
     },
 };
 

@@ -37,8 +37,8 @@ export function AnimatedCard({
             whileHover={{
                 scale: hoverScale,
                 y: hoverY,
-                borderColor: 'rgba(99, 102, 241, 0.3)',
-                boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3), 0 0 20px rgba(99, 102, 241, 0.1)',
+                borderColor: 'rgba(255, 107, 1, 0.3)',
+                boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3), 0 0 20px rgba(255, 107, 1, 0.1)',
             }}
             whileTap={onClick ? { scale: 0.98 } : undefined}
             onClick={onClick}
@@ -123,7 +123,7 @@ export function ListItemCard({ children, onClick, ...props }) {
             animate={{ opacity: 1, x: 0 }}
             whileHover={{
                 x: 4,
-                borderColor: 'rgba(99, 102, 241, 0.3)',
+                borderColor: 'rgba(255, 107, 1, 0.3)',
                 backgroundColor: 'rgba(255, 255, 255, 0.02)',
             }}
             transition={{ duration: 0.2 }}

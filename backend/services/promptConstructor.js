@@ -10,21 +10,20 @@
  * 
  * === UPDATED STYLE GUARDRAILS (Decision Layer) ===
  * 
- * Visual Style: Semi-abstract by default, ranging from abstract to 
- *               lightly representational based on content intent.
+ * Visual Style: Conceptual tech illustration by default. Clean, recognizable
+ *               scenes suitable for blog covers and social media posts.
  * 
- * Visual Density: Medium to high. Rich, layered, intentional.
- *                 Complexity allowed when it serves the message.
+ * Visual Density: Medium. Clean and professional with purposeful detail.
+ *                 Clarity over complexity.
  * 
  * Tone: ADAPTIVE - derived from content context (calm, energetic, 
  *       bold, reflective, serious, etc.). No single default mood.
  * 
- * Humans: ALLOWED. Faces allowed. Abstract representations, partial
- *         humans, silhouettes, blurred/stylized faces, symbolic 
- *         human presence encouraged when contextually relevant.
+ * Humans: ENCOURAGED. Stylized people interacting with technology,
+ *         collaborating in workspaces, using devices. Avoid hyperrealism.
  * 
  * Hyperrealism: AVOID. No photo-realistic stock photo aesthetics.
- *               Prefer stylized, illustrative, painterly, conceptual.
+ *               Prefer clean digital illustration, conceptual tech art.
  * 
  * Text: STRICTLY FORBIDDEN. No words, letters, numbers, typography.
  * 
@@ -49,7 +48,7 @@ class PromptConstructor {
         });
 
         this.promptTemplate = PromptTemplate.fromTemplate(`
-You are an image prompt engineer for an AI content system. Your task is to create a detailed image generation prompt that creates CONCRETE, RECOGNIZABLE visuals that reinforce the content's message.
+You are an image prompt engineer for an AI content system. Your task is to create a detailed image generation prompt that produces CLEAR, RECOGNIZABLE conceptual illustrations suitable for blog covers and social media posts.
 
 CONTENT CONTEXT:
 Title: {title}
@@ -65,39 +64,48 @@ Mood Keywords: {moodKeywords}
 
 === CRITICAL VISUAL PRINCIPLES ===
 
-RECOGNIZABILITY OVER ABSTRACTION:
-- The image MUST answer: "What is happening here?" or "What problem does this represent?"
-- Show REAL situations, REAL systems, REAL roles, REAL interactions
-- Use recognizable metaphors directly connected to the content
-- Pure abstraction is NOT the default — only use when the content explicitly benefits from it
-- Semi-abstraction preferred: stylized but LEGIBLE and interpretable at a glance
+CLEAR RECOGNIZABLE SCENES:
+- The image MUST depict a clear, recognizable scene that a viewer instantly understands
+- Show REAL situations: people working, collaborating, using technology, solving problems
+- Every image should look like a modern tech blog cover or LinkedIn post visual
+- The viewer should immediately know what topic the content is about
+
+PREFERRED VISUAL ELEMENTS:
+- People interacting with technology (laptops, phones, dashboards)
+- Modern digital workspaces and collaborative environments
+- UI screens, digital dashboards, data visualizations as background elements
+- Devices like laptops, tablets, and phones in context
+- Modern tech environments (offices, co-working spaces, digital landscapes)
+
+PREFERRED STYLE:
+- Conceptual tech illustration (like startup marketing visuals)
+- Clean digital illustration with flat or semi-flat design
+- Stylized but recognizable scenes — not abstract art
+- Modern, professional, and visually clean
+- Similar to illustrations on tech company websites and SaaS landing pages
 
 HUMAN PRESENCE:
-- Humans, faces, partial figures are ENCOURAGED when they help anchor meaning
-- Use stylized people, silhouettes, or symbolic human forms
-- Avoid hyperrealism and stock-photo aesthetics
-- Human presence should feel intentional and contextual
-
-VISUAL CLARITY:
-- Professional quality but adaptable warmth, tension, or energy based on context
-- Subject must remain legible and immediately interpretable
-- Complexity serves message clarity, not decoration
-- Symbols allowed only when directly connected and easily interpretable
+- Stylized people are STRONGLY ENCOURAGED in most images
+- Show them working, collaborating, presenting, brainstorming
+- Avoid hyperrealism — use clean illustrated style
+- Human presence anchors the scene and makes it relatable
 
 ABSOLUTE PROHIBITIONS:
 - NO text, words, letters, numbers, typography whatsoever
 - NO brand logos or readable symbols
-- NO decorative abstraction that doesn't serve the message
+- NO abstract art, random gradients, or symbolic shapes
+- NO surreal or dreamlike imagery
+- NO purely aesthetic visuals without a clear scene
 - NO hyperrealistic stock photography
 
 SUCCESS CRITERIA:
-The image is successful if it REINFORCES THE MESSAGE, not just looks impressive.
+The image should look like it belongs on a modern tech blog, startup website, or professional LinkedIn post. It must clearly represent the content topic.
 
 YOUR TASK:
 Create a detailed image prompt (3-5 sentences) that:
-1. Visually represents the CONCRETE situation, problem, or concept in the content
-2. Uses real, recognizable elements connected to the message
-3. Incorporates human presence when contextually relevant
+1. Depicts a CLEAR, RECOGNIZABLE scene related to the content topic
+2. Includes people interacting with technology when relevant
+3. Uses clean digital illustration / conceptual tech art style
 4. Matches emotional tone: {emotionalTone}
 5. Uses brand colors if provided: {brandColors}
 6. Is optimized for Stability AI Ultra / SDXL
@@ -145,7 +153,7 @@ Output ONLY the prompt text. No explanations, no formatting, no quotes.
                 emotionalTone: derivedTone,
                 keyMessage: keyMessage.substring(0, 300) || 'Express the core concept visually',
                 brandColors: brandColors.join(', ') || 'contextually appropriate colors',
-                preferredStyles: preferredStyles.join(', ') || 'semi-abstract, stylized, illustrative',
+                preferredStyles: preferredStyles.join(', ') || 'conceptual tech illustration, modern marketing illustration, clean digital illustration',
                 moodKeywords: moodKeywords.join(', ') || derivedTone
             });
 
@@ -203,7 +211,8 @@ Output ONLY the prompt text. No explanations, no formatting, no quotes.
             'text', 'words', 'letters', 'typography', 'numbers', 'writing', 'font',
             'logo', 'brand name', 'watermark', 'signature', 'copyright',
             'photorealistic', 'stock photo', 'hyperrealistic', 'photograph',
-            'blurry', 'low quality', 'pixelated', 'jpeg artifacts'
+            'blurry', 'low quality', 'pixelated', 'jpeg artifacts',
+            'abstract art', 'surreal', 'dreamlike', 'random gradients', 'paint splatter'
         ];
 
         // Note: We explicitly do NOT add 'human', 'face', 'person' anymore
@@ -226,9 +235,10 @@ Output ONLY the prompt text. No explanations, no formatting, no quotes.
 
         const style = intensityMap[sentiment] || intensityMap.neutral;
         const theme = themes[0] || 'conceptual idea';
+        const coreIdea = title || theme;
 
         return {
-            prompt: `Semi-abstract ${style.density} composition representing "${theme}". Rich layered textures with ${style.mood}. Stylized artistic interpretation with medium-high visual complexity. Painterly quality with intentional depth. Modern conceptual aesthetic.`,
+            prompt: `A clean conceptual illustration showing ${coreIdea} in a modern digital environment. Stylized people interacting with technology, laptops, and digital dashboards. Startup marketing illustration style with ${style.mood}. Minimal clutter, professional social media visual with ${style.density} energy. Clean digital illustration suitable for a tech blog cover.`,
             negativePrompt: this.getAdaptiveNegativePrompt(sentiment),
             derivedFrom: {
                 fallback: true,

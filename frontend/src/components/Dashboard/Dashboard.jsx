@@ -100,7 +100,7 @@ const KPICard = ({ label, value, unit, change, positive, icon, delay = 0 }) => (
         transition={{ delay, duration: 0.4 }}
         whileHover={{
             y: -4,
-            borderColor: 'rgba(99, 102, 241, 0.3)',
+            borderColor: 'rgba(255, 107, 1, 0.3)',
             boxShadow: '0 10px 40px rgba(0,0,0,0.3)'
         }}
     >
@@ -372,8 +372,8 @@ function Dashboard() {
                             <AreaChart data={chartData}>
                                 <defs>
                                     <linearGradient id="colorVariants" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                        <stop offset="5%" stopColor="#FF6B01" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="#FF6B01" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
@@ -383,7 +383,7 @@ function Dashboard() {
                                 <Area
                                     type="monotone"
                                     dataKey="variants"
-                                    stroke="#6366f1"
+                                    stroke="#FF6B01"
                                     fillOpacity={1}
                                     fill="url(#colorVariants)"
                                     strokeWidth={2}

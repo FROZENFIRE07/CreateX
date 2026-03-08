@@ -196,4 +196,7 @@ contentSchema.pre('save', function (next) {
     next();
 });
 
+// Index for fast platform variant aggregation
+contentSchema.index({ userId: 1, 'variants.platform': 1 });
+
 module.exports = mongoose.model('Content', contentSchema);

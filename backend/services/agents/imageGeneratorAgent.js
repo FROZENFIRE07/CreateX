@@ -168,7 +168,7 @@ class ImageGeneratorAgent {
             sentiment: ingestResult?.sentiment || 'neutral',
             keyMessage: ingestResult?.keyMessages?.[0] || content.data?.substring(0, 200) || '',
             brandColors: brandDNA?.visualAesthetics?.primaryColors || [],
-            preferredStyles: brandDNA?.visualAesthetics?.preferredStyles || ['abstract', 'minimalist'],
+            preferredStyles: brandDNA?.visualAesthetics?.preferredStyles || ['conceptual tech illustration', 'startup marketing visual', 'clean digital illustration'],
             moodKeywords: brandDNA?.visualAesthetics?.moodKeywords || ['professional', 'modern']
         };
     }

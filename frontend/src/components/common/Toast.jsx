@@ -1,6 +1,6 @@
 /**
  * Toast Wrapper Component
- * Configures react-hot-toast with SACO theme
+ * Configures react-hot-toast with OrchAI theme
  */
 
 import { Toaster, toast } from 'react-hot-toast';
@@ -48,11 +48,11 @@ export function ToastProvider() {
                 // Loading toast
                 loading: {
                     iconTheme: {
-                        primary: '#6366f1',
+                        primary: '#FF6B01',
                         secondary: '#fff',
                     },
                     style: {
-                        borderLeft: '4px solid #6366f1',
+                        borderLeft: '4px solid #FF6B01',
                     },
                 },
                 // Duration
@@ -83,7 +83,7 @@ export const showToast = {
     info: (message) => toast(message, {
         icon: 'ℹ️',
         style: {
-            borderLeft: '4px solid #6366f1',
+            borderLeft: '4px solid #FF6B01',
         },
     }),
 
@@ -99,7 +99,7 @@ export const showToast = {
     agent: (message) => toast(message, {
         icon: '🎯',
         style: {
-            borderLeft: '4px solid #8b5cf6',
+            borderLeft: '4px solid #f59e0b',
         },
     }),
 

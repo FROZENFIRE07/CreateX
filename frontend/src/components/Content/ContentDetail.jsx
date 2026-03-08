@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import {
     Box,
     Flex,
@@ -119,7 +119,7 @@ const KPICard = ({ icon: IconComponent, label, value, unit, color, delay }) => (
                     {label}
                 </Text>
                 <HStack spacing={1} align="baseline">
-                    <Text fontSize="2xl" fontWeight="700" color="white">
+                    <Text fontSize="2xl" fontWeight="700" color="app.text">
                         <CountUp end={value || 0} duration={1.5} decimals={0} />
                     </Text>
                     {unit && <Text fontSize="sm" color="gray.500">{unit}</Text>}
@@ -164,7 +164,7 @@ const DeviceFrame = ({ children, mode }) => {
     if (mode === 'mobile') {
         return (
             <Box
-                bg="#1a1a1a"
+                bg="gray.900"
                 borderRadius="3xl"
                 p="3px"
                 boxShadow="0 25px 50px -12px rgba(0, 0, 0, 0.5)"
@@ -185,7 +185,7 @@ const DeviceFrame = ({ children, mode }) => {
                         transform="translateX(-50%)"
                         w="120px"
                         h="25px"
-                        bg="#1a1a1a"
+                        bg="gray.900"
                         borderBottomRadius="xl"
                         zIndex={10}
                     />
@@ -224,6 +224,16 @@ function ContentDetail() {
     const [activeTab, setActiveTab] = useState(0);
     const [editingVariant, setEditingVariant] = useState(null); // Platform ID being edited
     const [editContent, setEditContent] = useState('');
+    const [searchParams] = useSearchParams();
+
+    // Auto-select the variant tab matching the ?platform= query param
+    useEffect(() => {
+        const targetPlatform = searchParams.get('platform');
+        if (targetPlatform && status?.variants?.length > 0) {
+            const idx = status.variants.findIndex(v => v.platform === targetPlatform);
+            if (idx >= 0) setActiveTab(idx);
+        }
+    }, [searchParams, status?.variants]);
 
     useEffect(() => {
         fetchContent();
@@ -310,7 +320,7 @@ function ContentDetail() {
             <Center h="50vh">
                 <VStack spacing={4}>
                     <Icon as={FiAlertCircle} boxSize={12} color="error.400" />
-                    <Heading size="md" color="white">Content Not Found</Heading>
+                    <Heading size="md" color="app.text">Content Not Found</Heading>
                     <Text color="gray.400">{error}</Text>
                     <Link to="/">
                         <Button leftIcon={<FiArrowLeft />} colorScheme="purple">
@@ -336,7 +346,7 @@ function ContentDetail() {
                 </Link>
                 <Flex justify="space-between" align="start" wrap="wrap" gap={4}>
                     <Box>
-                        <Heading size="lg" color="white">{content.title}</Heading>
+                        <Heading size="lg" color="app.text">{content.title}</Heading>
                         <Text color="gray.500" mt={1}>
                             Created {new Date(content.createdAt).toLocaleDateString('en-US', {
                                 weekday: 'short',
@@ -366,7 +376,7 @@ function ContentDetail() {
                         label="Processing Time"
                         value={status.kpis.processingTime}
                         unit="s"
-                        color="#6366f1"
+                        color="#FF6B01"
                         delay={0.2}
                     />
                     <KPICard
@@ -404,7 +414,7 @@ function ContentDetail() {
                             overflow="hidden"
                         >
                             <HStack justify="space-between" p={4} borderBottom="1px solid" borderColor="surface.border">
-                                <Heading size="sm" color="white">Original Content</Heading>
+                                <Heading size="sm" color="app.text">Original Content</Heading>
                                 <Badge colorScheme="blue">{content.type}</Badge>
                             </HStack>
                             <Box
@@ -434,7 +444,7 @@ function ContentDetail() {
                         >
                             <HStack justify="space-between" p={4} borderBottom="1px solid" borderColor="surface.border">
                                 <HStack spacing={3}>
-                                    <Heading size="sm" color="white">Generated Variants</Heading>
+                                    <Heading size="sm" color="app.text">Generated Variants</Heading>
                                     <Badge colorScheme="purple">{status?.variants?.length || 0} platforms</Badge>
                                 </HStack>
 
@@ -635,7 +645,7 @@ function ContentDetail() {
                                                                         bg="surface.bg"
                                                                         border="1px solid"
                                                                         borderColor="brand.500"
-                                                                        color="white"
+                                                                        color="app.text"
                                                                         minH="150px"
                                                                         resize="vertical"
                                                                         _focus={{ borderColor: 'brand.400', boxShadow: '0 0 0 1px var(--chakra-colors-brand-400)' }}
