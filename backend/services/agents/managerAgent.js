@@ -14,7 +14,7 @@
  * - Approval is not guaranteed
  */
 
-const { createBedrockLLM } = require('../bedrockClient');
+const { ChatGroq } = require('@langchain/groq');
 const { PromptTemplate } = require('@langchain/core/prompts');
 const { RunnableSequence } = require('@langchain/core/runnables');
 const { StringOutputParser } = require('@langchain/core/output_parsers');
@@ -60,7 +60,11 @@ function emit(contentId, message) {
 class ManagerAgent {
     constructor() {
         // Initialize LLM for planning and reasoning
-        this.llm = createBedrockLLM({ temperature: 0.3 });
+        this.llm = new ChatGroq({
+            apiKey: process.env.GROQ_API_KEY,
+            model: 'llama-3.3-70b-versatile',
+            temperature: 0.3
+        });
 
         // Planning prompt - generates JSON manifest
         this.planningPrompt = PromptTemplate.fromTemplate(`
@@ -560,7 +564,7 @@ Output only valid JSON.
         const verification = verifiers.verifyAll(variant, {
             forbiddenPhrases,
             requiredKeywords,
-            scoreThreshold: 70
+            scoreThreshold: 80
         });
 
         // Also check graph coherence if available

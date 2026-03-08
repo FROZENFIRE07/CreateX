@@ -230,8 +230,13 @@ router.post('/generate-title', async (req, res) => {
             return res.status(400).json({ error: 'Content must be at least 20 characters' });
         }
 
-        const { createBedrockLLM } = require('../services/bedrockClient');
-        const llm = createBedrockLLM({ temperature: 0.3, maxTokens: 60 });
+        const { ChatGroq } = require('@langchain/groq');
+        const llm = new ChatGroq({
+            apiKey: process.env.GROQ_API_KEY,
+            modelName: 'llama-3.3-70b-versatile',
+            temperature: 0.3,
+            maxTokens: 60,
+        });
 
         const snippet = content.substring(0, 1500);
         const response = await llm.invoke([

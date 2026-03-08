@@ -8,7 +8,7 @@
  * - Enriches input for downstream agents (Chekhov's Gun tracking)
  */
 
-const { createBedrockLLM } = require('../bedrockClient');
+const { ChatGroq } = require('@langchain/groq');
 const { PromptTemplate } = require('@langchain/core/prompts');
 const { RunnableSequence } = require('@langchain/core/runnables');
 const { StringOutputParser } = require('@langchain/core/output_parsers');
@@ -16,7 +16,11 @@ const vectorStore = require('../vectorStore');
 
 class IngestAgent {
     constructor() {
-        this.llm = createBedrockLLM({ temperature: 0.2 });
+        this.llm = new ChatGroq({
+            apiKey: process.env.GROQ_API_KEY,
+            model: 'llama-3.3-70b-versatile',
+            temperature: 0.2
+        });
 
         this.analysisPrompt = PromptTemplate.fromTemplate(`
 You are the Ingest Agent - a content analyzer for the SACO system.

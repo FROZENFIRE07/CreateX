@@ -8,30 +8,26 @@
  * - Flags low-score content for human review (HOTL)
  */
 
-const { createBedrockLLM } = require('../bedrockClient');
+const { ChatGroq } = require('@langchain/groq');
 const { PromptTemplate } = require('@langchain/core/prompts');
 const { RunnableSequence } = require('@langchain/core/runnables');
 const { StringOutputParser } = require('@langchain/core/output_parsers');
 const vectorStore = require('../vectorStore');
 
-// Threshold: 70% consistency required (tuned for Claude/Bedrock scoring)
-const CONSISTENCY_THRESHOLD = 70;
+// Threshold from sources: 80% consistency required
+const CONSISTENCY_THRESHOLD = 80;
 
 class ReviewerAgent {
     constructor() {
-        this.llm = createBedrockLLM({ temperature: 0.1 });
+        this.llm = new ChatGroq({
+            apiKey: process.env.GROQ_API_KEY,
+            model: 'llama-3.3-70b-versatile',
+            temperature: 0.1
+        });
 
         this.reviewPrompt = PromptTemplate.fromTemplate(`
 You are the Reviewer Agent - a brand consistency auditor for SACO.
 Score the following content variant against the brand guidelines.
-
-IMPORTANT SCORING GUIDANCE:
-- Score generously if the content reasonably matches the brand direction.
-- A score of 80+ means the content is acceptable and on-brand. It does NOT need to be perfect.
-- If the brand DNA is vague or minimal, give the benefit of the doubt and score higher (85+).
-- Only score below 60 if the content clearly contradicts the brand voice or values.
-- If no forbidden words are found, avoidWords should be 95-100.
-- If the content matches the general audience and tone, score 80+ for those categories.
 
 CONTENT TO REVIEW:
 Platform: {platform}
@@ -41,10 +37,10 @@ BRAND DNA:
 {brandDNA}
 
 REVIEW CRITERIA:
-1. Tone Match (0-100): Does the tone generally align with brand voice?
-2. Value Alignment (0-100): Are brand values reasonably reflected?
-3. Keyword Usage (0-100): Are some relevant keywords present? (partial credit OK)
-4. Avoid Words Check (0-100): Are prohibited words absent? (100 if no forbidden words found)
+1. Tone Match (0-100): Does the tone align with brand voice?
+2. Value Alignment (0-100): Are brand values reflected?
+3. Keyword Usage (0-100): Are required keywords present?
+4. Avoid Words Check (0-100): Are prohibited words absent?
 5. Audience Fit (0-100): Is it appropriate for target audience?
 
 Calculate overall score as weighted average:

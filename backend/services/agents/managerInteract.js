@@ -12,7 +12,7 @@
  * - Error recovery: If something is ambiguous, ask smart clarifying questions
  */
 
-const { createBedrockLLM } = require('../bedrockClient');
+const { ChatGroq } = require('@langchain/groq');
 const { PromptTemplate } = require('@langchain/core/prompts');
 const { RunnableSequence } = require('@langchain/core/runnables');
 const { StringOutputParser } = require('@langchain/core/output_parsers');
@@ -24,10 +24,19 @@ const orchestrationEmitter = require('../orchestrationEmitter');
 
 class ManagerInteract {
     constructor() {
-        this.llm = createBedrockLLM({ temperature: 0.1 });
+        this.llm = new ChatGroq({
+            apiKey: process.env.GROQ_API_KEY,
+            model: 'llama-3.3-70b-versatile',
+            temperature: 0.1, // Lower temperature for more consistent JSON output
+            // Note: Groq doesn't support response_format yet, but keeping low temp helps
+        });
 
         // Separate LLM for content editing - can be more creative
-        this.editLLM = createBedrockLLM({ temperature: 0.4 });
+        this.editLLM = new ChatGroq({
+            apiKey: process.env.GROQ_API_KEY,
+            model: 'llama-3.3-70b-versatile',
+            temperature: 0.4 // Slightly higher for creative content edits
+        });
 
         // Main execution prompt - handles everything in one intelligent pass
         this.executionPrompt = PromptTemplate.fromTemplate(`
