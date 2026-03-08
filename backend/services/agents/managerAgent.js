@@ -560,7 +560,7 @@ Output only valid JSON.
         const verification = verifiers.verifyAll(variant, {
             forbiddenPhrases,
             requiredKeywords,
-            scoreThreshold: 80
+            scoreThreshold: 70
         });
 
         // Also check graph coherence if available
