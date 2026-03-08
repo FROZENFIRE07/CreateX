@@ -1,31 +1,29 @@
 /**
- * Bedrock Client Factory
- * Creates LangChain-compatible ChatBedrock instances for agents.
- * Uses Amazon Bedrock (Claude) as the foundation model.
+ * LLM Client Factory
+ * Falls back to Groq (Llama) when Bedrock is unavailable.
  */
 
-const { ChatBedrockConverse } = require('@langchain/aws');
+const { ChatGroq } = require('@langchain/groq');
 
-const BEDROCK_MODEL = process.env.BEDROCK_MODEL || 'us.anthropic.claude-3-5-haiku-20241022-v1:0';
-const BEDROCK_REGION = process.env.AWS_REGION || 'us-east-1';
+const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
 /**
- * Create a LangChain ChatBedrock instance (drop-in replacement for ChatGroq)
+ * Create a LangChain ChatGroq instance
  * @param {Object} options
  * @param {number} options.temperature - Sampling temperature (0-1)
  * @param {number} [options.maxTokens] - Maximum output tokens
- * @returns {ChatBedrockConverse}
+ * @returns {ChatGroq}
  */
 function createBedrockLLM({ temperature = 0.3, maxTokens } = {}) {
     const config = {
-        model: BEDROCK_MODEL,
-        region: BEDROCK_REGION,
+        apiKey: process.env.GROQ_API_KEY,
+        model: GROQ_MODEL,
         temperature,
     };
     if (maxTokens) {
         config.maxTokens = maxTokens;
     }
-    return new ChatBedrockConverse(config);
+    return new ChatGroq(config);
 }
 
 module.exports = { createBedrockLLM };
