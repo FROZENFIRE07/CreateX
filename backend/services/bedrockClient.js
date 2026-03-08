@@ -6,7 +6,7 @@
 
 const { ChatBedrockConverse } = require('@langchain/aws');
 
-const BEDROCK_MODEL = process.env.BEDROCK_MODEL || 'anthropic.claude-3-5-haiku-20241022-v1:0';
+const BEDROCK_MODEL = process.env.BEDROCK_MODEL || 'us.anthropic.claude-3-5-haiku-20241022-v1:0';
 const BEDROCK_REGION = process.env.AWS_REGION || 'us-east-1';
 
 /**
