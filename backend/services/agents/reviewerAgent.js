@@ -8,7 +8,7 @@
  * - Flags low-score content for human review (HOTL)
  */
 
-const { ChatGroq } = require('@langchain/groq');
+const { createBedrockLLM } = require('../bedrockClient');
 const { PromptTemplate } = require('@langchain/core/prompts');
 const { RunnableSequence } = require('@langchain/core/runnables');
 const { StringOutputParser } = require('@langchain/core/output_parsers');
@@ -19,11 +19,7 @@ const CONSISTENCY_THRESHOLD = 80;
 
 class ReviewerAgent {
     constructor() {
-        this.llm = new ChatGroq({
-            apiKey: process.env.GROQ_API_KEY,
-            model: 'llama-3.3-70b-versatile',
-            temperature: 0.1
-        });
+        this.llm = createBedrockLLM({ temperature: 0.1 });
 
         this.reviewPrompt = PromptTemplate.fromTemplate(`
 You are the Reviewer Agent - a brand consistency auditor for SACO.

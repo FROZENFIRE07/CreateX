@@ -34,18 +34,14 @@
  * context understanding should heavily influence application.
  */
 
-const { ChatGroq } = require('@langchain/groq');
+const { createBedrockLLM } = require('./bedrockClient');
 const { PromptTemplate } = require('@langchain/core/prompts');
 const { RunnableSequence } = require('@langchain/core/runnables');
 const { StringOutputParser } = require('@langchain/core/output_parsers');
 
 class PromptConstructor {
     constructor() {
-        this.llm = new ChatGroq({
-            apiKey: process.env.GROQ_API_KEY,
-            model: 'llama-3.3-70b-versatile',
-            temperature: 0.5
-        });
+        this.llm = createBedrockLLM({ temperature: 0.5 });
 
         this.promptTemplate = PromptTemplate.fromTemplate(`
 You are an image prompt engineer for an AI content system. Your task is to create a detailed image generation prompt that produces CLEAR, RECOGNIZABLE conceptual illustrations suitable for blog covers and social media posts.

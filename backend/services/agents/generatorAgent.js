@@ -8,7 +8,7 @@
  * - Grounds generation in facts to avoid hallucination
  */
 
-const { ChatGroq } = require('@langchain/groq');
+const { createBedrockLLM } = require('../bedrockClient');
 const { PromptTemplate } = require('@langchain/core/prompts');
 const { RunnableSequence } = require('@langchain/core/runnables');
 const { StringOutputParser } = require('@langchain/core/output_parsers');
@@ -98,12 +98,7 @@ By embedding intelligent capabilities directly into workflows, organizations can
 
 class GeneratorAgent {
     constructor() {
-        this.llm = new ChatGroq({
-            apiKey: process.env.GROQ_API_KEY,
-            model: 'llama-3.3-70b-versatile',
-            temperature: 0.5,  // Lower temp for better JSON compliance
-            maxTokens: 4096    // Prevent truncation on long-form content (email/blog)
-        });
+        this.llm = createBedrockLLM({ temperature: 0.5, maxTokens: 4096 });
 
         // Stricter retry prompt for when initial generation fails JSON parsing
         this.retryPrompt = PromptTemplate.fromTemplate(`

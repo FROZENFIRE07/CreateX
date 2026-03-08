@@ -6,16 +6,13 @@
  * concrete changes for the next retry attempt.
  */
 
-const { ChatGroq } = require('@langchain/groq');
+const { createBedrockLLM } = require('../bedrockClient');
 const { PromptTemplate } = require('@langchain/core/prompts');
 const { RunnableSequence } = require('@langchain/core/runnables');
 const { StringOutputParser } = require('@langchain/core/output_parsers');
 
 // Low temperature for analytical reasoning
-const llm = new ChatGroq({
-    model: 'llama-3.3-70b-versatile',
-    temperature: 0.2
-});
+const llm = createBedrockLLM({ temperature: 0.2 });
 
 const reflectionPrompt = PromptTemplate.fromTemplate(`
 You are a content quality analyst. A content generation task has failed verification.
