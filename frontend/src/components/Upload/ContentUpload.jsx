@@ -20,7 +20,9 @@ import {
     Progress,
     Icon,
     Tooltip,
+    Switch,
     useBreakpointValue,
+    useDisclosure,
 } from '@chakra-ui/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDropzone } from 'react-dropzone';
@@ -41,9 +43,13 @@ import {
     FiMail,
     FiInstagram,
     FiFileText,
+    FiSend,
+    FiEye,
+    FiAlertTriangle,
 } from 'react-icons/fi';
 import api from '../../services/api';
 import { showToast } from '../common';
+import PublishPreviewModal from '../Content/PublishPreviewModal';
 
 const MotionBox = motion(Box);
 const MotionFlex = motion(Flex);
@@ -173,6 +179,9 @@ function ContentUpload() {
     const [variants, setVariants] = useState([]);
     const [currentStep, setCurrentStep] = useState(0);
     const [showConfetti, setShowConfetti] = useState(false);
+    const [publicationMode, setPublicationMode] = useState('mock');
+    const [autoPublish, setAutoPublish] = useState(false);
+    const [showPreview, setShowPreview] = useState(false);
 
     const logsEndRef = useRef(null);
     const titleGenTimeout = useRef(null);
@@ -355,14 +364,18 @@ function ContentUpload() {
             const createRes = await api.post('/content', {
                 title,
                 data: content,
-                type: 'text'
+                type: 'text',
+                publicationMode,
+                autoPublish,
             });
 
             const newContentId = createRes.data.content.id;
             setContentId(newContentId);
 
             await api.post(`/content/${newContentId}/orchestrate`, {
-                platforms: selectedPlatforms
+                platforms: selectedPlatforms,
+                publicationMode,
+                autoPublish,
             });
 
             setLoading(false);
@@ -549,6 +562,124 @@ function ContentUpload() {
                                         </SimpleGrid>
                                     </Box>
 
+                                    {/* Publication Mode & Auto-Publish */}
+                                    <Box
+                                        bg="surface.bg"
+                                        borderRadius="xl"
+                                        border="1px solid"
+                                        borderColor="surface.border"
+                                        p={4}
+                                    >
+                                        <Text fontWeight="600" color="gray.300" fontSize="sm" mb={4}>Publishing Options</Text>
+                                        <VStack spacing={4} align="stretch">
+                                            {/* Publication Mode Toggle */}
+                                            <HStack justify="space-between">
+                                                <VStack align="start" spacing={0}>
+                                                    <HStack spacing={2}>
+                                                        <Icon as={FiSend} color={publicationMode === 'live' ? 'brand.400' : 'gray.500'} boxSize={4} />
+                                                        <Text fontSize="sm" color="app.text" fontWeight="500">
+                                                            {publicationMode === 'live' ? 'Live Mode' : 'Mock Mode'}
+                                                        </Text>
+                                                    </HStack>
+                                                    <Text fontSize="xs" color="gray.500" mt={0.5}>
+                                                        {publicationMode === 'live'
+                                                            ? 'Content will be published to real platforms via Ayrshare'
+                                                            : 'Simulated publishing — no real posts will be created'
+                                                        }
+                                                    </Text>
+                                                </VStack>
+                                                <Tooltip
+                                                    label={publicationMode === 'live' ? 'Switch to Mock mode' : 'Switch to Live mode (requires Ayrshare setup)'}
+                                                    hasArrow
+                                                >
+                                                    <Box>
+                                                        <Switch
+                                                            colorScheme="orange"
+                                                            size="md"
+                                                            isChecked={publicationMode === 'live'}
+                                                            isDisabled={orchestrating}
+                                                            onChange={(e) => setPublicationMode(e.target.checked ? 'live' : 'mock')}
+                                                        />
+                                                    </Box>
+                                                </Tooltip>
+                                            </HStack>
+
+                                            {publicationMode === 'live' && (
+                                                <HStack
+                                                    bg="rgba(255, 107, 1, 0.08)"
+                                                    p={3}
+                                                    borderRadius="lg"
+                                                    border="1px solid"
+                                                    borderColor="rgba(255, 107, 1, 0.2)"
+                                                    spacing={2}
+                                                >
+                                                    <Icon as={FiAlertTriangle} color="brand.400" boxSize={4} flexShrink={0} />
+                                                    <Text fontSize="xs" color="brand.300">
+                                                        Live mode will publish to connected social media accounts. Make sure you've connected your accounts in Settings → Ayrshare Integration.
+                                                    </Text>
+                                                </HStack>
+                                            )}
+
+                                            {/* Auto-Publish Toggle */}
+                                            <HStack justify="space-between">
+                                                <VStack align="start" spacing={0}>
+                                                    <HStack spacing={2}>
+                                                        <Icon as={FiZap} color={autoPublish ? 'brand.400' : 'gray.500'} boxSize={4} />
+                                                        <Text fontSize="sm" color="app.text" fontWeight="500">
+                                                            Auto-Publish
+                                                        </Text>
+                                                        {autoPublish && (
+                                                            <Badge
+                                                                colorScheme="orange"
+                                                                variant="subtle"
+                                                                fontSize="2xs"
+                                                                rounded="full"
+                                                            >
+                                                                Human out of the loop
+                                                            </Badge>
+                                                        )}
+                                                    </HStack>
+                                                    <Text fontSize="xs" color="gray.500" mt={0.5}>
+                                                        {autoPublish
+                                                            ? 'Approved content will be automatically published after orchestration'
+                                                            : 'You will review and confirm before any publishing (recommended)'
+                                                        }
+                                                    </Text>
+                                                </VStack>
+                                                <Tooltip
+                                                    label={autoPublish ? 'Disable auto-publish (human in the loop)' : 'Enable auto-publish (human out of the loop)'}
+                                                    hasArrow
+                                                >
+                                                    <Box>
+                                                        <Switch
+                                                            colorScheme="orange"
+                                                            size="md"
+                                                            isChecked={autoPublish}
+                                                            isDisabled={orchestrating}
+                                                            onChange={(e) => setAutoPublish(e.target.checked)}
+                                                        />
+                                                    </Box>
+                                                </Tooltip>
+                                            </HStack>
+
+                                            {autoPublish && publicationMode === 'live' && (
+                                                <HStack
+                                                    bg="rgba(239, 68, 68, 0.08)"
+                                                    p={3}
+                                                    borderRadius="lg"
+                                                    border="1px solid"
+                                                    borderColor="rgba(239, 68, 68, 0.2)"
+                                                    spacing={2}
+                                                >
+                                                    <Icon as={FiAlertTriangle} color="error.400" boxSize={4} flexShrink={0} />
+                                                    <Text fontSize="xs" color="error.300">
+                                                        Caution: With both Live Mode and Auto-Publish enabled, content will be posted to real social media accounts without manual review.
+                                                    </Text>
+                                                </HStack>
+                                            )}
+                                        </VStack>
+                                    </Box>
+
                                     {/* Error */}
                                     {error && (
                                         <HStack bg="rgba(239, 68, 68, 0.1)" p={3} borderRadius="lg" border="1px solid" borderColor="error.500">
@@ -577,7 +708,13 @@ function ContentUpload() {
                     </VStack>
 
                     {/* Right - Logs & Results */}
-                    <VStack spacing={6} align="stretch">
+                    <VStack spacing={6} align="stretch" position="sticky" top="80px" maxH="calc(100vh - 100px)" overflowY="auto"
+                        css={{
+                            '&::-webkit-scrollbar': { width: '4px' },
+                            '&::-webkit-scrollbar-track': { background: 'transparent' },
+                            '&::-webkit-scrollbar-thumb': { background: 'rgba(255,255,255,0.1)', borderRadius: '4px' },
+                        }}
+                    >
                         {/* Workflow Log */}
                         <MotionBox
                             initial={{ opacity: 0, y: 20 }}
@@ -588,8 +725,6 @@ function ContentUpload() {
                             border="1px solid"
                             borderColor="surface.border"
                             overflow="hidden"
-                            position="sticky"
-                            top="80px"
                         >
                             <HStack justify="space-between" p={4} borderBottom="1px solid" borderColor="surface.border">
                                 <Heading size="sm" color="app.text">Workflow Log</Heading>
@@ -650,16 +785,31 @@ function ContentUpload() {
                             >
                                 <HStack justify="space-between" p={4} borderBottom="1px solid" borderColor="surface.border">
                                     <Heading size="sm" color="app.text">Generated Variants</Heading>
-                                    <Button
-                                        size="sm"
-                                        bg="brand.500"
-                                        color="white"
-                                        rightIcon={<FiArrowRight />}
-                                        onClick={() => navigate(`/content/${contentId}`)}
-                                        _hover={{ bg: 'brand.600' }}
-                                    >
-                                        View All
-                                    </Button>
+                                    <HStack spacing={2}>
+                                        {!autoPublish && (
+                                            <Button
+                                                size="sm"
+                                                leftIcon={<FiEye />}
+                                                variant="outline"
+                                                borderColor="brand.500"
+                                                color="brand.400"
+                                                onClick={() => setShowPreview(true)}
+                                                _hover={{ bg: 'rgba(255, 107, 1, 0.1)' }}
+                                            >
+                                                Review & Publish
+                                            </Button>
+                                        )}
+                                        <Button
+                                            size="sm"
+                                            bg="brand.500"
+                                            color="white"
+                                            rightIcon={<FiArrowRight />}
+                                            onClick={() => navigate(`/content/${contentId}`)}
+                                            _hover={{ bg: 'brand.600' }}
+                                        >
+                                            View All
+                                        </Button>
+                                    </HStack>
                                 </HStack>
 
                                 <VStack p={4} spacing={3} align="stretch">
@@ -698,6 +848,17 @@ function ContentUpload() {
                     </VStack>
                 </SimpleGrid>
             </VStack>
+
+            {/* Publish Preview Modal (human in the loop) */}
+            {showPreview && contentId && (
+                <PublishPreviewModal
+                    isOpen={showPreview}
+                    onClose={() => setShowPreview(false)}
+                    contentId={contentId}
+                    variants={variants}
+                    mode={publicationMode}
+                />
+            )}
         </>
     );
 }

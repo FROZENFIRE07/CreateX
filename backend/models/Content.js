@@ -56,7 +56,17 @@ const variantSchema = new mongoose.Schema({
         content: String,
         generatedAt: { type: Date, default: Date.now },
         source: { type: String, enum: ['manager', 'orchestration', 'user'], default: 'orchestration' }
-    }]
+    }],
+    // Publish status tracking per variant
+    publishStatus: {
+        published: { type: Boolean, default: false },
+        publishedAt: Date,
+        postId: String,
+        postUrl: String,
+        mode: { type: String, enum: ['mock', 'live'], default: 'mock' },
+        error: String,
+        retryCount: { type: Number, default: 0 }
+    }
 });
 
 
@@ -159,6 +169,24 @@ const contentSchema = new mongoose.Schema({
         type: String,
         enum: ['pending', 'processing', 'completed', 'failed'],
         default: 'pending'
+    },
+    // Publication preferences for this content
+    publicationMode: {
+        type: String,
+        enum: ['mock', 'live'],
+        default: 'mock'
+    },
+    autoPublish: {
+        type: Boolean,
+        default: false
+    },
+    // Overall publish summary
+    publishSummary: {
+        totalVariants: Number,
+        publishedCount: Number,
+        failedCount: Number,
+        mode: String,
+        lastPublishAt: Date
     },
     orchestrationLog: [{
         agent: String,

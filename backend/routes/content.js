@@ -264,7 +264,7 @@ router.post('/generate-title', async (req, res) => {
  */
 router.post('/', async (req, res) => {
     try {
-        const { title, data, type = 'text' } = req.body;
+        const { title, data, type = 'text', publicationMode, autoPublish } = req.body;
 
         if (!data) {
             return res.status(400).json({ error: 'Content data is required' });
@@ -281,7 +281,9 @@ router.post('/', async (req, res) => {
             title: title || data.substring(0, 100).trim(),
             data,
             type,
-            orchestrationStatus: 'pending'
+            orchestrationStatus: 'pending',
+            publicationMode: publicationMode || 'mock',
+            autoPublish: autoPublish || false,
         });
 
         await content.save();
@@ -385,7 +387,7 @@ router.get('/:id', async (req, res) => {
  */
 router.post('/:id/orchestrate', async (req, res) => {
     try {
-        const { platforms = ['twitter', 'linkedin', 'email'] } = req.body;
+        const { platforms = ['twitter', 'linkedin', 'email'], publicationMode, autoPublish } = req.body;
 
         // Validate platforms
         const validPlatforms = ['twitter', 'linkedin', 'email', 'instagram', 'blog'];
@@ -413,6 +415,9 @@ router.post('/:id/orchestrate', async (req, res) => {
         // Update status to processing
         content.orchestrationStatus = 'processing';
         content.orchestrationLog = [];
+        // Persist publication preferences if provided
+        if (publicationMode) content.publicationMode = publicationMode;
+        if (autoPublish !== undefined) content.autoPublish = autoPublish;
         await content.save();
 
         // Send response first to allow frontend to connect SSE
@@ -473,7 +478,8 @@ async function orchestrateInBackground(content, brandDNA, platforms, userId) {
             image: v.image, // Include generated image URL
             consistencyScore: v.consistencyScore,
             status: v.status,
-            feedback: v.feedback
+            feedback: v.feedback,
+            publishStatus: v.publishStatus || null,
         }));
 
         // Save orchestration logs to database (from result.log)

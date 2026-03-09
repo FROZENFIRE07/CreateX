@@ -138,6 +138,7 @@ const StatusBadge = ({ status }) => {
         failed: { colorScheme: 'red', icon: FiAlertCircle, label: 'Failed' },
         approved: { colorScheme: 'green', icon: FiCheckCircle, label: 'Approved' },
         flagged: { colorScheme: 'orange', icon: FiAlertCircle, label: 'Flagged' },
+        published: { colorScheme: 'teal', icon: FiCheckCircle, label: 'Published' },
     };
 
     const config = badges[status] || { colorScheme: 'gray', label: status };

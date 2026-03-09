@@ -622,7 +622,28 @@ Output only valid JSON.
         orchestrationEmitter.step(state.contentId, 'publish', null, 'running');
 
         const approvedCount = state.platforms.filter(p => state.reviews[p]?.passed).length;
-        emit(state.contentId, `🚀 Preparing to publish ${approvedCount} approved variants...`);
+
+        // Determine publication mode from content document
+        const pubMode = state.content?.publicationMode || 'mock';
+        const isAutoPublish = state.content?.autoPublish || false;
+
+        // Look up per-user Ayrshare API key
+        let userApiKey = null;
+        if (pubMode === 'live' && isAutoPublish && state.content?.userId) {
+            try {
+                const User = require('../../models/User');
+                const user = await User.findById(state.content.userId);
+                userApiKey = user?.getAyrshareKey?.() || null;
+            } catch (err) {
+                console.warn('[Manager] Could not load user API key:', err.message);
+            }
+        }
+
+        if (isAutoPublish && pubMode === 'live') {
+            emit(state.contentId, `🚀 AUTO-PUBLISH enabled (${pubMode} mode) — publishing ${approvedCount} approved variants...`);
+        } else {
+            emit(state.contentId, `🚀 Preparing to publish ${approvedCount} approved variants (${pubMode} mode)...`);
+        }
 
         for (const platform of state.platforms) {
             const review = state.reviews[platform];
@@ -652,10 +673,18 @@ Output only valid JSON.
                     emit(state.contentId, `  → Attaching generated image to ${platform}`);
                 }
 
-                const published = await publisherAgent.format(variant);
+                // Use publication mode: auto-publish uses content mode, manual defaults to mock
+                const effectiveMode = isAutoPublish ? pubMode : 'mock';
+                const published = await publisherAgent.format(variant, effectiveMode, userApiKey);
                 state.published.push(platform);
 
-                emit(state.contentId, `  ✅ ${platform.toUpperCase()} published successfully (ID: ${published.mockId || 'pending'})`);
+                // Store publish result on state for buildResults
+                if (!state.publishResults) state.publishResults = {};
+                state.publishResults[platform] = published.publishStatus || {};
+
+                const postId = published.publishStatus?.postId || published.publishResult?.mockId || 'pending';
+                const modeLabel = published.publishStatus?.mode || effectiveMode;
+                emit(state.contentId, `  ✅ ${platform.toUpperCase()} published successfully (${modeLabel} | ID: ${postId})`);
 
                 if (published.trace) {
                     state.pipelineTrace.push(published.trace);
@@ -729,6 +758,11 @@ Output only valid JSON.
                     prompt: image.prompt,
                     provider: image.provider
                 };
+            }
+
+            // Attach publish status if available
+            if (state.publishResults?.[platform]) {
+                variant.publishStatus = state.publishResults[platform];
             }
 
             return variant;

@@ -177,6 +177,62 @@ router.put('/profile', authMiddleware, async (req, res) => {
 });
 
 /**
+ * PUT /api/auth/ayrshare-key
+ * Save user's Ayrshare API key (encrypted at rest)
+ */
+router.put('/ayrshare-key', authMiddleware, async (req, res) => {
+    try {
+        const { apiKey } = req.body;
+
+        const user = await User.findById(req.userId);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        if (apiKey && typeof apiKey === 'string' && apiKey.trim().length > 0) {
+            user.setAyrshareKey(apiKey.trim());
+        } else {
+            // Clear the key
+            user.setAyrshareKey(null);
+        }
+
+        await user.save();
+
+        res.json({
+            message: apiKey ? 'Ayrshare API key saved' : 'Ayrshare API key removed',
+            hasKey: user.hasAyrshareKey(),
+        });
+    } catch (error) {
+        console.error('Ayrshare key update error:', error);
+        res.status(500).json({ error: 'Failed to update Ayrshare API key' });
+    }
+});
+
+/**
+ * GET /api/auth/ayrshare-key
+ * Check if user has an Ayrshare API key configured (does NOT return the key)
+ */
+router.get('/ayrshare-key', authMiddleware, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        res.json({
+            hasKey: user.hasAyrshareKey(),
+            // Return masked key hint (last 4 chars) for UI confirmation
+            keyHint: user.hasAyrshareKey()
+                ? '••••' + user.getAyrshareKey().slice(-4)
+                : null,
+        });
+    } catch (error) {
+        console.error('Ayrshare key check error:', error);
+        res.status(500).json({ error: 'Failed to check Ayrshare API key' });
+    }
+});
+
+/**
  * GET /api/auth/stats
  * Get user KPIs/stats for dashboard
  */

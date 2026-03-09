@@ -20,6 +20,7 @@ const contentRoutes = require('./routes/content');
 const brandRoutes = require('./routes/brand');
 const managerRoutes = require('./routes/manager');
 const libraryRoutes = require('./routes/library');
+const publishRoutes = require('./routes/publish');
 
 const app = express();
 
@@ -67,6 +68,7 @@ app.use('/api/content', contentRoutes);
 app.use('/api/brand', brandRoutes);
 app.use('/api/manager', managerRoutes);
 app.use('/api/library', libraryRoutes);
+app.use('/api/publish', publishRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
